@@ -24,7 +24,7 @@ time_t start_time;
 int total_seeds = 0;
 float max_ocean = 25; //maximum amount of ocean allowed in percentage
 float step = 8;
-float min_major_biomes = 3; //minimum major biome percent
+float min_major_biomes = 0; //minimum major biome percent
 
 #ifdef USE_PTHREAD
 static void *searchCompactBiomesThread(void *data)
@@ -184,7 +184,24 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 				all_biomes = 0;
 		if (!all_biomes) continue;
 		
-		printf("\rFound: %19ld | huts at: %5i,%-5i & %5i,%-5i | ocean: %2.2lf%%%*c\n", s, goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z, ocean_percent, 12, ' ');
+		
+		char *major_biomes_string[] = {"desert", "plains", "jungle", "forest", "roofedForest", "mesa", "extremeHills", "swamp", "savanna", "icePlains"};
+		FILE *fp;
+		fp = fopen("found.txt", "a" );
+		char percents[1000] = "";
+		for (int i = 0; i < sizeof(major_biome_counter)/sizeof(int); i++)
+			sprintf(percents, "%s%s: %.2f%%,", percents, major_biomes_string[i], (major_biome_counter[i] * (step * step) / (w*h)) * 100);
+		char huts[100];
+		sprintf(huts, "%i:%i & %i:%i", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
+		
+		fprintf(fp, "%ld,huts: %s,ocean: %.2f%%,%s\n", s, huts, ocean_percent, percents);
+		fclose(fp);
+		printf("\r%15s: %ld\n", "Found", s);
+		printf("%15s: %d,%i & %i,%i\n", "Huts", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
+		printf("%15s: %.2f%%\n", "Ocean", ocean_percent);
+		for (int i = 0; i < sizeof(major_biome_counter)/sizeof(int); i++)
+		printf("%15s: %.2f%%\n", major_biomes_string[i], (major_biome_counter[i] * (step * step) / (w*h)) * 100);
+		printf("\n");
 		fflush(stdout);
 		viable_count++;
     }
@@ -287,8 +304,11 @@ int main(int argc, char *argv[])
 	char time_end[20];
 	time_t end_time = time (NULL);
     strftime(time_end, 20, "%m/%d/%Y %H:%M:%S", localtime(&end_time));
-	printf("\nEnded: %s\n", time_end);
-	printf("Total time elapsed: %ld seconds\n", end_time - start_time);
-	printf("Viable seeds found: %li\n", viable_count);
+	printf("\n\n%20s: %s\n", "Ended", time_end);
+	printf("%20s: %ld seconds\n", "Total time elapsed", end_time - start_time);
+	printf("%20s: %li\n", "Seeds scanned", count);
+	printf("%20s: %li\n", "Viable seeds found", viable_count);
+	printf("%20s: %.0f\n", "Average SPS", (float)count / (float)(end_time - start_time));
+	
     return 0;
 }
