@@ -130,7 +130,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 			if (biomes[i] != -1)
 				goto nope;
 		}
-		printf("\rFound: %ld | huts at: %i,%i & %i,%i | ocean: %.2lf%% %lf\n", s, goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z, ocean_percent, ocean_count);
+		printf("\rFound: %ld | huts at: %i,%i & %i,%i | ocean: %.2lf%%\n", s, goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z, ocean_percent);
 		fflush(stdout);
 		
 		nope:;
