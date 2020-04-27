@@ -1,0 +1,8 @@
+version: '2.1'
+
+services:
+  cubiomes2:
+    image: cubiomes2
+    build:
+      context: .
+      dockerfile: Dockerfile
