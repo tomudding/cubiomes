@@ -13,6 +13,7 @@ struct compactinfo_t
 };
 
 long count = 0;
+long passed_filter = 0;
 long last_count = 0;
 float sps = 0;
 time_t start_time;
@@ -31,17 +32,17 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
     LayerStack g = setupGenerator(MC_1_15);
     int *cache = allocCache(&g.layers[L_VORONOI_ZOOM_1], w, h);
 
-	int ice = 140,  bamboo = 168,  desert = 2,  plains = 1,  ocean = 0,  jungle = 21,  forest = 4,  mushroom = 14, mesa = 37, flower = 132;
 	float step = 8;
 	float max_ocean = 25;
 
     for (s = info.seedStart; s != info.seedEnd; s++)
     {
 		sps = ++count / (time (NULL) - start_time);
-		printf("\r%li seeds scanned | %.0lf seeds per second", count, sps);
+		printf("\r%li seeds scanned %li passed filter | %.0lf seeds per second", count, passed_filter, sps);
 		fflush(stdout);
 		if (!checkForBiomes(&g, cache, s, ax, az, w, h, info.filter, info.minscale))
 			goto nope;
+		passed_filter++;
 		applySeed(&g, s);
 		int x, z;
 		int r = info.range;
@@ -66,7 +67,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 					}
 				}
 			}
-			
+
 			for (int i = 0; i < counter; i++) {
 				for (int j = 0; j < counter; j++) {
 					if (j == i)
@@ -84,7 +85,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 					}
 				}
 			}
-			
+
 			goto nope;
 			L_hut_found:;
 		}
@@ -105,9 +106,10 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 			goto nope;
 			L_monument_found:;
 		}
-			
+
 		float ocean_count = 0;
-		int biomes[10] = {ice, bamboo, desert, plains, ocean, jungle, forest, mushroom, mesa, flower};
+		// biome enum defined in layers.h
+		enum BiomeID biomes[10] = {ice_spikes, bamboo_jungle, desert, plains, ocean, jungle, forest, mushroom_fields, mesa, flower_forest};
 		for (z = -r; z < r; z+=step)
 		{
 			for (x = -r; x < r; x+=step)
@@ -132,7 +134,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 		}
 		printf("\rFound: %ld | huts at: %i,%i & %i,%i | ocean: %.2lf%%\n", s, goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z, ocean_percent);
 		fflush(stdout);
-		
+
 		nope:;
     }
 
@@ -148,7 +150,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 
 int main(int argc, char *argv[])
 {
-	start_time = time (NULL) - 1;
+  start_time = time (NULL) - 1;
     initBiomes();
 
     int64_t seedStart, seedEnd;
@@ -173,14 +175,11 @@ int main(int argc, char *argv[])
     if (argc <= 3 || sscanf(argv[3], "%u", &threads) != 1) threads = 1;
     if (argc <= 4 || sscanf(argv[4], "%u", &range) != 1) range = 1024;
 
-
-	int ice = 140,  bamboo = 168,  desert = 2,  plains = 1,  ocean = 0,  jungle = 21,  forest = 4,  mushroom = 14, mesa = 37, flower = 132;
-
-	int biomes[] = {ice, desert, plains, ocean, jungle, forest, mushroom, mesa, flower};
+    enum BiomeID biomes[] = {ice_spikes, bamboo_jungle, desert, plains, ocean, jungle, forest, mushroom_fields, mesa, flower_forest};
     // TODO: set up a customisable biome filter
     filter = setupBiomeFilter(biomes,
-                sizeof(biomes)/sizeof(int));
-    minscale = 1; // terminate search at this layer scale
+                sizeof(biomes)/sizeof(enum BiomeID));
+    minscale = 256; // terminate search at this layer scale
     // TODO: simple structure filter
     withHut = 1;
     withMonument = 1;
