@@ -5,7 +5,7 @@
 
 struct compactinfo_t
 {
-    long long seedStart, seedEnd;
+    int64_t seedStart, seedEnd;
     unsigned int range;
     BiomeFilter filter;
     int withHut, withMonument;
@@ -35,7 +35,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
     struct compactinfo_t info = *(struct compactinfo_t *)data;
     int ax = -info.range, az = -info.range;
     int w = 2*info.range, h = 2*info.range;
-    long long s;
+    int64_t s;
 
     LayerStack g = setupGenerator(MC_1_15);
     int *cache = allocCache(&g.layers[L_VORONOI_ZOOM_1], w, h);
@@ -227,7 +227,7 @@ int main(int argc, char *argv[])
     strftime(time_start, 20, "%m/%d/%Y %H:%M:%S", localtime(&start_time));
 	printf("Started: %s\n", time_start);
 	
-    long long seedStart, seedEnd;
+    int64_t seedStart, seedEnd;
     unsigned int threads, t, range;
     BiomeFilter filter;
     int withHut, withMonument;
@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
     // TODO: simple structure filter
     withHut = 1;
     withMonument = 1;
-	total_seeds = (long long)seedEnd - (long long)seedStart;
+	total_seeds = (uint64_t)seedEnd - (uint64_t)seedStart;
 
     printf("Starting search through seeds %" PRId64 " to %" PRId64", using %u threads.\n"
            "Search radius = %u.\n", seedStart, seedEnd, threads, range);
@@ -265,11 +265,11 @@ int main(int argc, char *argv[])
     struct compactinfo_t info[threads];
 
     // store thread information
-    long long seedCnt = ((long long)seedEnd - (long long)seedStart) / threads;
+    uint64_t seedCnt = ((uint64_t)seedEnd - (uint64_t)seedStart) / threads;
     for (t = 0; t < threads; t++)
     {
-        info[t].seedStart = (long long)(seedStart + seedCnt * t);
-        info[t].seedEnd = (long long)(seedStart + seedCnt * (t+1));
+        info[t].seedStart = (int64_t)(seedStart + seedCnt * t);
+        info[t].seedEnd = (int64_t)(seedStart + seedCnt * (t+1));
         info[t].range = range;
         info[t].filter = filter;
         info[t].withHut = withHut;
