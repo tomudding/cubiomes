@@ -196,7 +196,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 		
 		fprintf(fp, "%ld,huts: %s,ocean: %.2f%%,%s\n", s, huts, ocean_percent, percents);
 		fclose(fp);
-		printf("\r%15s: %ld\n", "Found", s);
+		printf("\n%15s: %ld\n", "Found", s);
 		printf("%15s: %d,%i & %i,%i\n", "Huts", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
 		printf("%15s: %.2f%%\n", "Ocean", ocean_percent);
 		for (int i = 0; i < sizeof(major_biome_counter)/sizeof(int); i++)
