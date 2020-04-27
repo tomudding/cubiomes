@@ -38,10 +38,10 @@ find_quadhuts.o: find_quadhuts.c
 	$(CC) -c $(CFLAGS) $<
 
 god: Gods_seedfinder.o layers.o generator.o finders.o
-        $(CC) -o $@ $^ $(LDFLAGS)
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 Gods_seedfinder.o: Gods_seedfinder.c
-        $(CC) -c $(CFLAGS) $<
+	$(CC) -c $(CFLAGS) $<
 	
 xmapview.o: xmapview.c xmapview.h
 	$(CC) -c $(CFLAGS) $<
