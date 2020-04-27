@@ -33,7 +33,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 
 	int ice = 140,  bamboo = 168,  desert = 2,  plains = 1,  ocean = 0,  jungle = 21,  forest = 4,  mushroom = 14, mesa = 37, flower = 132;
 	float step = 8;
-	float max_ocean = info.range * info.range / step * .25;
+	float max_ocean = 25;
 
     for (s = info.seedStart; s != info.seedEnd; s++)
     {
@@ -114,7 +114,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 			{
 				Pos p = {x, z};
 				int biome = getBiomeAtPos(g, p);
-				if (biome == 0 || biome == 24 || biome == 10 || biome == 50 || biome == 46 || biome == 49 || biome == 45 || biome == 48 || biome == 44 || biome == 47)
+				if (isOceanic(biome))
 					ocean_count++;
 				for (int i = 0; i < 10; i++) {
 					if (biome == biomes[i]) {
@@ -123,14 +123,14 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 				}
 			}
 		}
-		if (ocean_count > max_ocean)
+		float ocean_percent = (ocean_count * (step * step) / (w * h)) * 100;
+		if (ocean_percent > max_ocean)
 			goto nope;
 		for (int i = 0; i < 10; i++) {
 			if (biomes[i] != -1)
 				goto nope;
 		}
-		float ocean_percent = (ocean_count / (info.range * info.range / step)) * 100;
-		printf("\rFound: %ld | huts at: %i,%i & %i,%i | ocean: %.2lf%%\n", s, goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z, ocean_percent);
+		printf("\rFound: %ld | huts at: %i,%i & %i,%i | ocean: %.2lf%% %lf\n", s, goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z, ocean_percent, ocean_count);
 		fflush(stdout);
 		
 		nope:;
