@@ -24,6 +24,7 @@ time_t start_time;
 int total_seeds = 0;
 float max_ocean = 25; //maximum amount of ocean allowed in percentage
 float step = 8;
+float min_major_biomes = 5; //minimum major biome percent
 
 #ifdef USE_PTHREAD
 static void *searchCompactBiomesThread(void *data)
@@ -46,8 +47,9 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 		count++;
 		if (info.thread_id == 0) {
 			time_t this_time = time (NULL);
+			if (count > 1)
 			if (this_time - last_time >= 5 || viable_count > last_viable_count) {
-				sps = (count - last_count) / (this_time - last_time);
+				sps = (float)(count - last_count) / (float)(this_time - last_time);
 				time_t predict_end = this_time + (float)total_seeds / sps;
 				strftime(eta, 20, "%H:%M:%S", localtime(&predict_end));
 				float percent_done = (float)count / (float)total_seeds * 100;
@@ -140,7 +142,11 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 
 		float ocean_count = 0;
 		// biome enum defined in layers.h
-		enum BiomeID biomes[10] = {ice_spikes, bamboo_jungle, desert, plains, ocean, jungle, forest, mushroom_fields, mesa, flower_forest};
+		enum BiomeID biomes[] = {ice_spikes, bamboo_jungle, desert, plains, ocean, jungle, forest, mushroom_fields, mesa, flower_forest, warm_ocean, frozen_ocean, megaTaiga, roofedForest, extremeHills, swamp, savanna, icePlains};
+		
+		enum BiomeID major_biomes[] = {desert, plains, jungle, forest, roofedForest, mesa, extremeHills, swamp, savanna, icePlains};
+		int major_biome_counter[sizeof(major_biomes)/sizeof(enum BiomeID)] = {0};
+		
 		for (z = -r; z < r; z+=step)
 		{
 			for (x = -r; x < r; x+=step)
@@ -149,22 +155,35 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 				int biome = getBiomeAtPos(g, p);
 				if (isOceanic(biome))
 					ocean_count++;
-				for (int i = 0; i < 10; i++) {
-					if (biome == biomes[i]) {
+				for (int i = 0; i < sizeof(major_biome_counter)/sizeof(int); i++)
+					if (biome == major_biomes[i])
+						major_biome_counter[i]++;
+				for (int i = 0; i < sizeof(biomes)/sizeof(enum BiomeID); i++)
+					if (biome == biomes[i])
 						biomes[i] = -1;
-					}
-				}
 			}
 		}
+		
+		//check for max ocean percent
 		float ocean_percent = (ocean_count * (step * step) / (w * h)) * 100;
 		if (ocean_percent > max_ocean)
 			continue;
+		
+		//check for minimum major biome percent
+		int major_biome_less_than_min = 1;
+		for (int i = 0; i < sizeof(major_biome_counter)/sizeof(int); i++)
+			if ((major_biome_counter[i] * (step * step) / (w*h)) * 100 < min_major_biomes)
+				major_biome_less_than_min = 0;
+		if (!major_biome_less_than_min)
+			continue;
+		
+		//verify all biomes are present
 		int all_biomes = 1;
-		for (int i = 0; i < 10; i++) {
+		for (int i = 0; i < sizeof(biomes)/sizeof(enum BiomeID); i++)
 			if (biomes[i] != -1)
 				all_biomes = 0;
-		}
 		if (!all_biomes) continue;
+		
 		printf("\rFound: %19ld | huts at: %5i,%-5i & %5i,%-5i | ocean: %2.2lf%%%*c\n", s, goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z, ocean_percent, 12, ' ');
 		fflush(stdout);
 		viable_count++;
@@ -211,8 +230,7 @@ int main(int argc, char *argv[])
     if (argc <= 3 || sscanf(argv[3], "%u", &threads) != 1) threads = 1;
     if (argc <= 4 || sscanf(argv[4], "%u", &range) != 1) range = 1024;
 
-    enum BiomeID biomes[] = {ice_spikes, bamboo_jungle, desert, plains, ocean, jungle, forest, mushroom_fields, mesa, flower_forest};
-    // TODO: set up a customisable biome filter
+	enum BiomeID biomes[] = {ice_spikes, bamboo_jungle, desert, plains, ocean, jungle, forest, mushroom_fields, mesa, flower_forest, warm_ocean, frozen_ocean, megaTaiga, roofedForest, extremeHills, swamp, savanna, icePlains};
     filter = setupBiomeFilter(biomes,
                 sizeof(biomes)/sizeof(enum BiomeID));
     minscale = 256; // terminate search at this layer scale
