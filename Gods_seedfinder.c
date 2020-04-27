@@ -10,13 +10,20 @@ struct compactinfo_t
     BiomeFilter filter;
     int withHut, withMonument;
     int minscale;
+	int thread_id;
 };
 
 long count = 0;
-long passed_filter = 0;
 long last_count = 0;
+long viable_count = 0;
+long last_viable_count = 0;
+long passed_filter = 0;
 float sps = 0;
+char eta[20];
 time_t start_time;
+int total_seeds = 0;
+float max_ocean = 25; //maximum amount of ocean allowed in percentage
+float step = 8;
 
 #ifdef USE_PTHREAD
 static void *searchCompactBiomesThread(void *data)
@@ -32,24 +39,56 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
     LayerStack g = setupGenerator(MC_1_15);
     int *cache = allocCache(&g.layers[L_VORONOI_ZOOM_1], w, h);
 
-	float step = 8;
-	float max_ocean = 25;
+	time_t last_time = time (NULL);
 
     for (s = info.seedStart; s != info.seedEnd; s++)
     {
-		sps = ++count / (time (NULL) - start_time);
-		printf("\r%li seeds scanned %li passed filter | %.0lf seeds per second", count, passed_filter, sps);
-		fflush(stdout);
+		count++;
+		if (info.thread_id == 0) {
+			time_t this_time = time (NULL);
+			if (this_time - last_time >= 5 || viable_count > last_viable_count) {
+				sps = (count - last_count) / (this_time - last_time);
+				time_t predict_end = this_time + (float)total_seeds / sps;
+				strftime(eta, 20, "%H:%M:%S", localtime(&predict_end));
+				fprintf(stderr ,"\r%li scanned | %li passed filter | %li viable | %.0lf sps | %.2lf%% done | ETA: %.0f seconds", count, passed_filter, viable_count, sps, (float)count / (float)total_seeds * 100, ((float)total_seeds - count) / sps);
+				fflush(stdout);
+				last_time = this_time;
+				last_count = count;
+				last_viable_count = viable_count;
+			}
+		}
 		if (!checkForBiomes(&g, cache, s, ax, az, w, h, info.filter, info.minscale))
-			goto nope;
+			continue;
 		passed_filter++;
 		applySeed(&g, s);
 		int x, z;
 		int r = info.range;
+		
+		if (info.withMonument)
+		{
+			int monument_found = 0;
+			int r = info.range / MONUMENT_CONFIG.regionSize;
+			for (z = -r; z < r; z++)
+			{
+				for (x = -r; x < r; x++)
+				{
+					Pos p;
+					p = getLargeStructurePos(MONUMENT_CONFIG, s, x, z);
+					if (isViableOceanMonumentPos(g, cache, p.x, p.z))
+						if (abs(p.x) < info.range && abs(p.z) < info.range)
+							monument_found = 1;
+					if (monument_found) break;
+				}
+				if (monument_found) break;
+			}
+			if (!monument_found)
+				continue;
+		}
+		
 		Pos goodhuts[2];
 		if (info.withHut)
 		{
-			Pos huts[10000];
+			Pos huts[100];
 			int counter = 0;
 			int r = info.range / SWAMP_HUT_CONFIG.regionSize;
 			for (z = -r; z < r; z++)
@@ -67,7 +106,8 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 					}
 				}
 			}
-
+			
+			int huts_found = 0;
 			for (int i = 0; i < counter; i++) {
 				for (int j = 0; j < counter; j++) {
 					if (j == i)
@@ -81,30 +121,14 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 						//printf("%i, %i, %i, %i\n",huts[i].x,huts[i].z,huts[j].x,huts[j].z);
 						goodhuts[0] = huts[i];
 						goodhuts[1] = huts[j];
-						goto L_hut_found;
+						huts_found = 1;
 					}
+					if (huts_found) break;
 				}
+				if (huts_found) break;
 			}
-
-			goto nope;
-			L_hut_found:;
-		}
-		if (info.withMonument)
-		{
-			int r = info.range / MONUMENT_CONFIG.regionSize;
-			for (z = -r; z < r; z++)
-			{
-				for (x = -r; x < r; x++)
-				{
-					Pos p;
-					p = getLargeStructurePos(MONUMENT_CONFIG, s, x, z);
-					if (isViableOceanMonumentPos(g, cache, p.x, p.z))
-						if (abs(p.x) < info.range && abs(p.z) < info.range)
-							goto L_monument_found;
-				}
-			}
-			goto nope;
-			L_monument_found:;
+			if (!huts_found)
+				continue;
 		}
 
 		float ocean_count = 0;
@@ -127,15 +151,16 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 		}
 		float ocean_percent = (ocean_count * (step * step) / (w * h)) * 100;
 		if (ocean_percent > max_ocean)
-			goto nope;
+			continue;
+		int all_biomes = 1;
 		for (int i = 0; i < 10; i++) {
 			if (biomes[i] != -1)
-				goto nope;
+				all_biomes = 0;
 		}
-		printf("\rFound: %ld | huts at: %i,%i & %i,%i | ocean: %.2lf%%\n", s, goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z, ocean_percent);
+		if (!all_biomes) continue;
+		printf("\rFound: %ld | huts at: %i,%i & %i,%i | ocean: %.2lf%%%*c\n", s, goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z, ocean_percent, 30, ' ');
 		fflush(stdout);
-
-		nope:;
+		viable_count++;
     }
 
     freeGenerator(g);
@@ -150,9 +175,13 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 
 int main(int argc, char *argv[])
 {
-  start_time = time (NULL) - 1;
-    initBiomes();
-
+	initBiomes();
+	
+	start_time = time (NULL);
+	char time_start[20];
+    strftime(time_start, 20, "%m/%d/%Y %H:%M:%S", localtime(&start_time));
+	printf("Started: %s\n", time_start);
+	
     int64_t seedStart, seedEnd;
     unsigned int threads, t, range;
     BiomeFilter filter;
@@ -183,6 +212,7 @@ int main(int argc, char *argv[])
     // TODO: simple structure filter
     withHut = 1;
     withMonument = 1;
+	total_seeds = (uint64_t)seedEnd - (uint64_t)seedStart;
 
     printf("Starting search through seeds %" PRId64 " to %" PRId64", using %u threads.\n"
            "Search radius = %u.\n", seedStart, seedEnd, threads, range);
@@ -201,6 +231,7 @@ int main(int argc, char *argv[])
         info[t].withHut = withHut;
         info[t].withMonument = withMonument;
         info[t].minscale = minscale;
+        info[t].thread_id = t;
     }
     info[threads-1].seedEnd = seedEnd;
 
@@ -228,5 +259,11 @@ int main(int argc, char *argv[])
 
 #endif
 
+	char time_end[20];
+	time_t end_time = time (NULL);
+    strftime(time_end, 20, "%m/%d/%Y %H:%M:%S", localtime(&end_time));
+	printf("\nEnded: %s\n", time_end);
+	printf("Total time elapsed: %ld seconds\n", end_time - start_time);
+	printf("Viable seeds found: %li\n", viable_count);
     return 0;
 }
