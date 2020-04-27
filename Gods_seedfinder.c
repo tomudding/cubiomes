@@ -24,7 +24,7 @@ time_t start_time;
 int total_seeds = 0;
 float max_ocean = 25; //maximum amount of ocean allowed in percentage
 float step = 8;
-float min_major_biomes = 5; //minimum major biome percent
+float min_major_biomes = 3; //minimum major biome percent
 
 #ifdef USE_PTHREAD
 static void *searchCompactBiomesThread(void *data)
