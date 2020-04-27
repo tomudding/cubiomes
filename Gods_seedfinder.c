@@ -50,7 +50,14 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 				sps = (count - last_count) / (this_time - last_time);
 				time_t predict_end = this_time + (float)total_seeds / sps;
 				strftime(eta, 20, "%H:%M:%S", localtime(&predict_end));
-				fprintf(stderr ,"\r%li scanned | %li passed filter | %li viable | %.0lf sps | %.2lf%% done | ETA: %.0f seconds", count, passed_filter, viable_count, sps, (float)count / (float)total_seeds * 100, ((float)total_seeds - count) / sps);
+				float percent_done = (float)count / (float)total_seeds * 100;
+				if (percent_done < 0) percent_done = 0;
+				long int seconds_passed = this_time - start_time;
+				float eta = ((float)total_seeds - count) / sps;
+				if (eta < 0 || percent_done < 0)
+					fprintf(stderr ,"\rscanned: %10li | viable: %3li | sps: %5.0lf | elapsed: %7.0lds", count, viable_count, sps, seconds_passed);
+				else
+					fprintf(stderr ,"\rscanned: %10li | viable: %3li | sps: %5.0lf | elapsed: %7.0lds | %3.2lf%% | eta: %7.0fs", count, viable_count, sps, seconds_passed, percent_done, eta);
 				fflush(stdout);
 				last_time = this_time;
 				last_count = count;
@@ -158,7 +165,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 				all_biomes = 0;
 		}
 		if (!all_biomes) continue;
-		printf("\rFound: %ld | huts at: %i,%i & %i,%i | ocean: %.2lf%%%*c\n", s, goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z, ocean_percent, 30, ' ');
+		printf("\rFound: %19ld | huts at: %5i,%-5i & %5i,%-5i | ocean: %2.2lf%%%*c\n", s, goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z, ocean_percent, 12, ' ');
 		fflush(stdout);
 		viable_count++;
     }
