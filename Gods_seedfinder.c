@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
 
 	int ice = 140,  bamboo = 168,  desert = 2,  plains = 1,  ocean = 0,  jungle = 21,  forest = 4,  mushroom = 14, mesa = 37, flower = 132;
 
-	int biomes[] = {desert, plains, ocean, jungle, forest, mushroom, mesa, flower};
+	int biomes[] = {ice, desert, plains, ocean, jungle, forest, mushroom, mesa, flower};
     // TODO: set up a customisable biome filter
     filter = setupBiomeFilter(biomes,
                 sizeof(biomes)/sizeof(int));
