@@ -59,7 +59,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 				if (eta < 0 || percent_done < 0)
 					fprintf(stderr ,"\rscanned: %10li | viable: %3li | sps: %5.0lf | elapsed: %7.0lds", count, viable_count, sps, seconds_passed);
 				else
-					fprintf(stderr ,"\rscanned: %10li | viable: %3li | sps: %5.0lf | elapsed: %7.0lds | %3.2lf%% | eta: %7.0fs", count, viable_count, sps, seconds_passed, percent_done, eta);
+					fprintf(stderr ,"\rscanned: %10li | viable: %3li | sps: %5.0lf | elapsed: %7.0lds | %3.2lf%% | eta: %7.0fs  ", count, viable_count, sps, seconds_passed, percent_done, eta);
 				fflush(stdout);
 				last_time = this_time;
 				last_count = count;
