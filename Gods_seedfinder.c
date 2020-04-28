@@ -26,6 +26,7 @@ long long total_seeds = 0;
 float max_ocean = 25; //maximum amount of ocean allowed in percentage
 float step = 8;
 float min_major_biomes = 0; //minimum major biome percent
+time_t last_time;
 
 void intHandler() {
 	char time_end[20];
@@ -53,22 +54,20 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
     LayerStack g = setupGenerator(MC_1_15);
     int *cache = allocCache(&g.layers[L_VORONOI_ZOOM_1], w, h);
 
-	time_t last_time = time (NULL);
-
+	last_time = time (NULL);
     for (s = info.seedStart; s != info.seedEnd; s++)
     {
 		count++;
-		if (info.thread_id == 0) {
-			time_t this_time = time (NULL);
-			if (count > 1)
+		time_t this_time = time (NULL);
+		if (count > 1)
 			if (this_time - last_time >= 5 || viable_count > last_viable_count) {
-				sps = (float)(count - last_count) / (float)(this_time - last_time);
-				time_t predict_end = this_time + total_seeds / sps;
+				sps = (count - last_count) / (this_time - last_time);
+				time_t predict_end = this_time + (float)total_seeds / sps;
 				strftime(eta, 20, "%H:%M:%S", localtime(&predict_end));
-				float percent_done = (float)count / total_seeds * 100;
+				float percent_done = (float)count / (float)total_seeds * 100;
 				if (percent_done < 0) percent_done = 0;
 				long int seconds_passed = this_time - start_time;
-				float eta = (total_seeds - count) / sps;
+				float eta = (float)(total_seeds - count) / sps;
 				if (eta < 0 || percent_done < 0)
 					fprintf(stderr ,"\rscanned: %10lli | viable: %3li | sps: %5.0lf | elapsed: %7.0lds", count, viable_count, sps, seconds_passed);
 				else
@@ -78,7 +77,6 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 				last_count = count;
 				last_viable_count = viable_count;
 			}
-		}
 		if (!checkForBiomes(&g, cache, s, ax, az, w, h, info.filter, info.minscale))
 			continue;
 		passed_filter++;
