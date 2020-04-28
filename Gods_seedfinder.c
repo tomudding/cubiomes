@@ -14,15 +14,16 @@ struct compactinfo_t
 	int thread_id;
 };
 
-long long count = 0;
-long long last_count = 0;
+int64_t count = 0;
+int64_t c[128] = {0};
+int64_t last_count = 0;
 long viable_count = 0;
 long last_viable_count = 0;
 long passed_filter = 0;
 float sps = 0;
 char eta[20];
 time_t start_time;
-long long total_seeds = 0;
+int64_t total_seeds = 0;
 float max_ocean = 25; //maximum amount of ocean allowed in percentage
 float step = 8;
 float min_major_biomes = 0; //minimum major biome percent
@@ -43,7 +44,7 @@ void intHandler()
 	printf("%20s: %lli\n", "Seeds scanned", count);
 	printf("%20s: %li\n", "Viable seeds found", viable_count);
 	printf("%20s: %.0f\n", "Average SPS", (double)count / (double)(end_time - start_time));
-	printf("\n\nPress [ENTER] to exit");
+	printf("\n\nPress [ENTER] to exit\n");
 	getchar();
 	exit(0);
 }
@@ -67,28 +68,30 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 	{
 		if (exited)
 			break;
-		count++;
+		c[info.thread_id]++;
 		time_t this_time = time(NULL);
-		if (count > 1)
-			if (this_time - last_time >= 5 || viable_count > last_viable_count)
-			{
-				sps = (count - last_count) / (this_time - last_time);
-				time_t predict_end = this_time + (double)total_seeds / sps;
-				strftime(eta, 20, "%H:%M:%S", localtime(&predict_end));
-				float percent_done = (double)count / (double)total_seeds * 100;
-				if (percent_done < 0)
-					percent_done = 0;
-				long int seconds_passed = this_time - start_time;
-				float eta = (double)(total_seeds - count) / sps;
-				if (eta < 0 || percent_done < 0)
-					fprintf(stderr, "\rscanned: %10lli | viable: %3li | sps: %5.0lf | elapsed: %7.0lds", count, viable_count, sps, seconds_passed);
-				else
-					fprintf(stderr, "\rscanned: %10lli | viable: %3li | sps: %5.0lf | elapsed: %7.0lds | %3.2lf%% | eta: %7.0fs  ", count, viable_count, sps, seconds_passed, percent_done, eta);
-				fflush(stdout);
-				last_time = this_time;
-				last_count = count;
-				last_viable_count = viable_count;
-			}
+		if (this_time - last_time >= 5 || viable_count > last_viable_count)
+		{
+			count = 0;
+			for (int i = 0; i < 128; i++)
+				count += c[i];
+			sps = (count - last_count) / (this_time - last_time);
+			time_t predict_end = this_time + (double)total_seeds / sps;
+			strftime(eta, 20, "%H:%M:%S", localtime(&predict_end));
+			float percent_done = (double)count / (double)total_seeds * 100;
+			if (percent_done < 0)
+				percent_done = 0;
+			long int seconds_passed = this_time - start_time;
+			float eta = (double)(total_seeds - count) / sps;
+			if (eta < 0 || percent_done < 0)
+				fprintf(stderr, "\rscanned: %10lli | viable: %3li | sps: %5.0lf | elapsed: %7.0lds", count, viable_count, sps, seconds_passed);
+			else
+				fprintf(stderr, "\rscanned: %10lli | viable: %3li | sps: %5.0lf | elapsed: %7.0lds | %3.2lf%% | eta: %7.0fs  ", count, viable_count, sps, seconds_passed, percent_done, eta);
+			fflush(stdout);
+			last_time = this_time;
+			last_count = count;
+			last_viable_count = viable_count;
+		}
 		if (!checkForBiomes(&g, cache, s, ax, az, w, h, info.filter, info.minscale))
 			continue;
 		passed_filter++;
@@ -221,6 +224,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 
 		char *major_biomes_string[] = {"desert", "plains", "jungle", "forest", "roofedForest", "mesa", "extremeHills", "swamp", "savanna", "icePlains"};
 
+		fprintf(stderr, "\r%*c", 100, ' ');
 		printf("\n%15s: %" PRId64 "\n", "Found", s);
 		printf("%15s: %d,%i & %i,%i\n", "Huts", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
 		printf("%15s: %.2f%%\n", "Ocean", ocean_percent);
@@ -230,12 +234,21 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 		fflush(stdout);
 
 		FILE *fp;
-		fp = fopen("found.csv", "a");
+		if (!(fp = fopen("found.csv", "r")))
+		{
+			fp = fopen("found.csv", "a");
+			fprintf(fp, "Seed,Huts,Ocean");
+			for (int i = 0; i < sizeof(major_biome_counter) / sizeof(int); i++)
+				fprintf(fp, ",%s", major_biomes_string[i]);
+			fprintf(fp, "\n");
+		}
+		else
+			fp = fopen("found.csv", "a");
 		fprintf(fp, "%" PRId64 "", s);
-		fprintf(fp, ",huts: %i:%i & %i:%i", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
-		fprintf(fp, ",ocean: %.2f%%", ocean_percent);
+		fprintf(fp, ",%i:%i & %i:%i", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
+		fprintf(fp, ",%.2f%%", ocean_percent);
 		for (int i = 0; i < sizeof(major_biome_counter) / sizeof(int); i++)
-			fprintf(fp, ",%s: %.2f%%", major_biomes_string[i], (major_biome_counter[i] * (step * step) / (w * h)) * 100);
+			fprintf(fp, ",%.2f%%", (major_biome_counter[i] * (step * step) / (w * h)) * 100);
 		fprintf(fp, "\n");
 		fclose(fp);
 	}
@@ -251,7 +264,6 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 
 int main(int argc, char *argv[])
 {
-	signal(SIGINT, intHandler);
 	initBiomes();
 
 	start_time = time(NULL);
@@ -279,22 +291,38 @@ int main(int argc, char *argv[])
 	if (argc <= 1 || sscanf(argv[1], "%" PRId64, &seedStart) != 1)
 	{
 		printf("Seed start: ");
-		scanf("%" SCNd64, &seedStart);
+		if (!scanf("%" SCNd64, &seedStart))
+		{
+			printf("That's not right");
+			exit(1);
+		}
 	}
 	if (argc <= 2 || sscanf(argv[2], "%" PRId64, &seedEnd) != 1)
 	{
 		printf("Seed end: ");
-		scanf("%" SCNd64, &seedEnd);
+		if (!scanf("%" SCNd64, &seedEnd))
+		{
+			printf("That's not right");
+			exit(1);
+		}
 	}
 	if (argc <= 3 || sscanf(argv[3], "%u", &threads) != 1)
 	{
 		printf("Threads: ");
-		scanf("%i", &threads);
+		if (!scanf("%i", &threads))
+		{
+			printf("That's not right");
+			exit(1);
+		}
 	}
 	if (argc <= 4 || sscanf(argv[4], "%u", &range) != 1)
 	{
 		printf("Radius: ");
-		scanf("%i", &range);
+		if (!scanf("%i", &range))
+		{
+			printf("That's not right");
+			exit(1);
+		}
 	}
 
 	enum BiomeID biomes[] = {ice_spikes, bamboo_jungle, desert, plains, ocean, jungle, forest, mushroom_fields, mesa, flower_forest, warm_ocean, frozen_ocean, megaTaiga, roofedForest, extremeHills, swamp, savanna, icePlains};
@@ -348,14 +376,20 @@ int main(int argc, char *argv[])
 		threadID[t] = CreateThread(NULL, 0, searchCompactBiomesThread, (LPVOID)&info[t], 0, NULL);
 	}
 
+	signal(SIGINT, intHandler);
+
 	WaitForMultipleObjects(threads, threadID, TRUE, INFINITE);
 
 #endif
 
+	fprintf(stderr, "\r%*c", 100, ' ');
+	count = 0;
+	for (int i = 0; i < 128; i++)
+		count += c[i];
 	char time_end[20];
 	time_t end_time = time(NULL);
 	strftime(time_end, 20, "%m/%d/%Y %H:%M:%S", localtime(&end_time));
-	printf("\n\n%20s: %s\n", "Ended", time_end);
+	printf("\n%20s: %s\n", "Ended", time_end);
 	printf("%20s: %ld seconds\n", "Total time elapsed", end_time - start_time);
 	printf("%20s: %lli\n", "Seeds scanned", count);
 	printf("%20s: %li\n", "Viable seeds found", viable_count);

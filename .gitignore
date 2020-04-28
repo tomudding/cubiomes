@@ -2,8 +2,7 @@ find_compactbiomes
 find_quadhuts
 .cproject
 .project
-finders.o
-generator.o
-Gods_seedfinder.o
-layers.o
+*.o
 god
+*.exe
+*.csv
