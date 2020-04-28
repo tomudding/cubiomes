@@ -256,10 +256,22 @@ int main(int argc, char *argv[])
                 "  range         search range (in blocks) [uint, default=1024]\n");
         exit(1);
     }
-    if (argc <= 1 || sscanf(argv[1], "%" PRId64, &seedStart) != 1) seedStart = 0;
-    if (argc <= 2 || sscanf(argv[2], "%" PRId64, &seedEnd) != 1) seedEnd = -1;
-    if (argc <= 3 || sscanf(argv[3], "%u", &threads) != 1) threads = 1;
-    if (argc <= 4 || sscanf(argv[4], "%u", &range) != 1) range = 1024;
+    if (argc <= 1 || sscanf(argv[1], "%" PRId64, &seedStart) != 1) {
+		printf("Seed start: ");
+		scanf("%"SCNd64, &seedStart);
+	}
+    if (argc <= 2 || sscanf(argv[2], "%" PRId64, &seedEnd) != 1) {
+		printf("Seed end: ");
+		scanf("%"SCNd64, &seedEnd);
+	}
+    if (argc <= 3 || sscanf(argv[3], "%u", &threads) != 1) {
+		printf("Threads: ");
+		scanf("%i", &threads);
+	}
+    if (argc <= 4 || sscanf(argv[4], "%u", &range) != 1) {
+		printf("Radius: ");
+		scanf("%i", &range);
+	}
 	
 
 	enum BiomeID biomes[] = {ice_spikes, bamboo_jungle, desert, plains, ocean, jungle, forest, mushroom_fields, mesa, flower_forest, warm_ocean, frozen_ocean, megaTaiga, roofedForest, extremeHills, swamp, savanna, icePlains};
