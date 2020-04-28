@@ -193,10 +193,11 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 				continue;
 		}
 
-		float ocean_count = 0;
+		int ocean_count = 0;
 		// biome enum defined in layers.h
 		enum BiomeID biomes[] = {ice_spikes, bamboo_jungle, desert, plains, ocean, jungle, forest, mushroom_fields, mesa, flower_forest, warm_ocean, frozen_ocean, megaTaiga, roofedForest, extremeHills, swamp, savanna, icePlains};
-		enum BiomeID major_biomes[][16] = {
+		int biome_exists[sizeof(biomes) / sizeof(enum BiomeID)] = {0};
+		enum BiomeID major_biomes[11][16] = {
 			{desert, desert_lakes, desert_hills},
 			{plains, sunflower_plains},
 			{extremeHills, mountains, wooded_mountains, gravelly_mountains, modified_gravelly_mountains, mountain_edge},
@@ -220,13 +221,14 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 				int biome = getBiomeAtPos(g, p);
 				if (isOceanic(biome))
 					ocean_count++;
-				for (int i = 0; i < sizeof(major_biome_counter) / sizeof(int); i++)
-					for (int j = 0; i < 16; i++)
-						if (biome == major_biomes[i][j])
-							major_biome_counter[i]++;
-				for (int i = 0; i < sizeof(biomes) / sizeof(enum BiomeID); i++)
+				for (int i = 0; i < sizeof(biome_exists) / sizeof(int); i++)
 					if (biome == biomes[i])
-						biomes[i] = -1;
+						biome_exists[i] = -1;
+				if (!isOceanic(biome))
+					for (int i = 0; i < sizeof(major_biome_counter) / sizeof(int); i++)
+						for (int j = 0; j < sizeof(major_biomes[i]) / sizeof(enum BiomeID); j++)
+							if (biome == major_biomes[i][j])
+								major_biome_counter[i]++;
 			}
 		}
 
@@ -246,7 +248,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 		//verify all biomes are present
 		int all_biomes = 1;
 		for (int i = 0; i < sizeof(biomes) / sizeof(enum BiomeID); i++)
-			if (biomes[i] != -1)
+			if (biome_exists[i] != -1)
 				all_biomes = 0;
 		if (!all_biomes)
 			continue;
