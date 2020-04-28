@@ -188,7 +188,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 		
 		char *major_biomes_string[] = {"desert", "plains", "jungle", "forest", "roofedForest", "mesa", "extremeHills", "swamp", "savanna", "icePlains"};
 		
-		printf("\n%15s: %ld\n", "Found", s);
+		printf("\n%15s: %"PRId64"\n", "Found", s);
 		printf("%15s: %d,%i & %i,%i\n", "Huts", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
 		printf("%15s: %.2f%%\n", "Ocean", ocean_percent);
 		for (int i = 0; i < sizeof(major_biome_counter)/sizeof(int); i++)
@@ -198,7 +198,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 		
 		FILE *fp;
 		fp = fopen("found.csv", "a");
-		fprintf(fp, "%ld", s);
+		fprintf(fp, "%"PRId64"", s);
 		fprintf(fp, ",huts: %i:%i & %i:%i", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
 		fprintf(fp, ",ocean: %.2f%%", ocean_percent);
 		for (int i = 0; i < sizeof(major_biome_counter)/sizeof(int); i++)
@@ -248,6 +248,7 @@ int main(int argc, char *argv[])
     if (argc <= 2 || sscanf(argv[2], "%" PRId64, &seedEnd) != 1) seedEnd = -1;
     if (argc <= 3 || sscanf(argv[3], "%u", &threads) != 1) threads = 1;
     if (argc <= 4 || sscanf(argv[4], "%u", &range) != 1) range = 1024;
+	
 
 	enum BiomeID biomes[] = {ice_spikes, bamboo_jungle, desert, plains, ocean, jungle, forest, mushroom_fields, mesa, flower_forest, warm_ocean, frozen_ocean, megaTaiga, roofedForest, extremeHills, swamp, savanna, icePlains};
     filter = setupBiomeFilter(biomes,
