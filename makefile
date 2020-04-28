@@ -9,7 +9,7 @@ ifeq ($(OS),Windows_NT)
 	override CFLAGS += -D_WIN32
 	RM = del
 else
-	override LDFLAGS += -lX11 -pthread
+	override LDFLAGS += -pthread
 	#RM = rm
 endif
 
