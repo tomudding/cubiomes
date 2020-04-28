@@ -29,6 +29,7 @@ float max_ocean = 25; //maximum amount of ocean allowed in percentage
 float step = 8;
 float min_major_biomes = 0; //minimum major biome percent
 time_t last_time;
+int printing = 0;
 int exited = 0;
 int exit_counter = 0;
 void intHandler()
@@ -60,7 +61,7 @@ static DWORD WINAPI statTracker()
 	while (!exited)
 	{
 		time_t this_time = time(NULL);
-		if (this_time - last_time >= 1 || viable_count > last_viable_count)
+		if (!printing && (this_time - last_time >= 1 || viable_count > last_viable_count))
 		{
 			count = 0;
 			for (int i = 0; i < 128; i++)
@@ -208,7 +209,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 			{icePlains, ice_spikes},
 			{taiga, taiga_hills, taiga_mountains, snowy_taiga, snowy_taiga_hills, snowy_taiga_mountains, giant_tree_taiga, giant_tree_taiga_hills, giant_spruce_taiga, giant_spruce_taiga_hills}};
 		char *major_biomes_string[] = {"desert", "plains", "extremeHills", "jungle", "forest", "roofedForest", "mesa", "swamp", "savanna", "icePlains", "taiga"};
-		int major_biome_counter[sizeof(major_biomes) / sizeof(enum BiomeID)] = {0};
+		int major_biome_counter[11] = {0};
 
 		int r = info.fullrange;
 		for (z = -r; z < r; z += step)
@@ -252,7 +253,8 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 
 		viable_count++;
 
-		fprintf(stderr, "\r%*c", 100, ' ');
+		printing = 1;
+		fprintf(stderr, "\r%*c", 105, ' ');
 		printf("\n%15s: %" PRId64 "\n", "Found", s);
 		printf("%15s: %d,%i & %i,%i\n", "Huts", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
 		printf("%15s: %.2f%%\n", "Ocean", ocean_percent);
@@ -260,6 +262,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 			printf("%15s: %.2f%%\n", major_biomes_string[i], (major_biome_counter[i] * (step * step) / (fw * fh)) * 100);
 		printf("\n");
 		fflush(stdout);
+		printing = 0;
 
 		FILE *fp;
 		if (!(fp = fopen("found.csv", "r")))
@@ -427,6 +430,7 @@ int main(int argc, char *argv[])
 
 #endif
 
+	printing = 1;
 	fprintf(stderr, "\r%*c", 105, ' ');
 	count = 0;
 	for (int i = 0; i < 128; i++)
