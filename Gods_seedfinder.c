@@ -34,21 +34,8 @@ int exited = 0;
 int exit_counter = 0;
 void intHandler()
 {
+	printf("\nStopping all threads...");
 	exited = 1;
-	printf("\n");
-	if (exit_counter++)
-		exit(0);
-	char time_end[20];
-	time_t end_time = time(NULL);
-	strftime(time_end, 20, "%m/%d/%Y %H:%M:%S", localtime(&end_time));
-	printf("\n%20s: %s\n", "Ended", time_end);
-	printf("%20s: %ld seconds\n", "Total time elapsed", end_time - start_time);
-	printf("%20s: %" PRId64 "\n", "Seeds scanned", count);
-	printf("%20s: %li\n", "Viable seeds found", viable_count);
-	printf("%20s: %.0f\n", "Average SPS", (double)count / (double)(end_time - start_time));
-	printf("\n\nPress [ENTER] to exit\n");
-	getchar();
-	exit(0);
 }
 
 #ifdef USE_PTHREAD
@@ -229,8 +216,14 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 						for (int j = 0; j < sizeof(major_biomes[i]) / sizeof(enum BiomeID); j++)
 							if (biome == major_biomes[i][j])
 								major_biome_counter[i]++;
+				if (exited)
+					break;
 			}
+			if (exited)
+				break;
 		}
+		if (exited)
+			break;
 
 		//check for max ocean percent
 		float ocean_percent = (ocean_count * (step * step) / (fw * fh)) * 100;
@@ -297,6 +290,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 
 int main(int argc, char *argv[])
 {
+	printf("Build: 31\n");
 	initBiomes();
 
 	start_time = time(NULL);
@@ -445,6 +439,9 @@ int main(int argc, char *argv[])
 	printf("%20s: %" PRId64 "\n", "Seeds scanned", count);
 	printf("%20s: %li\n", "Viable seeds found", viable_count);
 	printf("%20s: %.0f\n", "Average SPS", (double)count / (double)(end_time - start_time));
+
+	printf("\n\nPress [ENTER] to exit\n");
+	getchar();
 
 	return 0;
 }
