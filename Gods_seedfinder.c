@@ -2,6 +2,7 @@
 #include "generator.h"
 #include "math.h"
 #include <time.h>
+#include <signal.h>
 
 struct compactinfo_t
 {
@@ -21,10 +22,22 @@ long passed_filter = 0;
 float sps = 0;
 char eta[20];
 time_t start_time;
-int total_seeds = 0;
+long long total_seeds = 0;
 float max_ocean = 25; //maximum amount of ocean allowed in percentage
 float step = 8;
 float min_major_biomes = 0; //minimum major biome percent
+
+void intHandler() {
+	char time_end[20];
+	time_t end_time = time (NULL);
+    strftime(time_end, 20, "%m/%d/%Y %H:%M:%S", localtime(&end_time));
+	printf("\n\n%20s: %s\n", "Ended", time_end);
+	printf("%20s: %ld seconds\n", "Total time elapsed", end_time - start_time);
+	printf("%20s: %lli\n", "Seeds scanned", count);
+	printf("%20s: %li\n", "Viable seeds found", viable_count);
+	printf("%20s: %.0f\n", "Average SPS", (float)count / (float)(end_time - start_time));
+	exit(0);
+}
 
 #ifdef USE_PTHREAD
 static void *searchCompactBiomesThread(void *data)
@@ -50,12 +63,12 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 			if (count > 1)
 			if (this_time - last_time >= 5 || viable_count > last_viable_count) {
 				sps = (float)(count - last_count) / (float)(this_time - last_time);
-				time_t predict_end = this_time + (float)total_seeds / sps;
+				time_t predict_end = this_time + total_seeds / sps;
 				strftime(eta, 20, "%H:%M:%S", localtime(&predict_end));
-				float percent_done = (float)count / (float)total_seeds * 100;
+				float percent_done = (float)count / total_seeds * 100;
 				if (percent_done < 0) percent_done = 0;
 				long int seconds_passed = this_time - start_time;
-				float eta = ((float)total_seeds - count) / sps;
+				float eta = (total_seeds - count) / sps;
 				if (eta < 0 || percent_done < 0)
 					fprintf(stderr ,"\rscanned: %10lli | viable: %3li | sps: %5.0lf | elapsed: %7.0lds", count, viable_count, sps, seconds_passed);
 				else
@@ -220,6 +233,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 
 int main(int argc, char *argv[])
 {
+	signal(SIGINT, intHandler);
 	initBiomes();
 	
 	start_time = time (NULL);
