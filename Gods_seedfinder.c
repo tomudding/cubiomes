@@ -260,7 +260,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 		printing = 0;
 
 		FILE *fp;
-		if (!(fp = fopen("found.csv", "r")))
+		if (!(fopen("found.csv", "r")))
 		{
 			fp = fopen("found.csv", "a");
 			fprintf(fp, "Seed,Huts,Ocean");
@@ -269,7 +269,10 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 			fprintf(fp, "\n");
 		}
 		else
+		{
+			fclose(fp);
 			fp = fopen("found.csv", "a");
+		}
 		fprintf(fp, "%" PRId64 "", s);
 		fprintf(fp, ",%i:%i & %i:%i", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
 		fprintf(fp, ",%.2f%%", ocean_percent);
@@ -290,7 +293,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 
 int main(int argc, char *argv[])
 {
-	printf("Build: 31\n");
+	printf("Build: 32\n");
 	initBiomes();
 
 	start_time = time(NULL);
