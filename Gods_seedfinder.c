@@ -42,7 +42,7 @@ void intHandler()
 	printf("%20s: %ld seconds\n", "Total time elapsed", end_time - start_time);
 	printf("%20s: %lli\n", "Seeds scanned", count);
 	printf("%20s: %li\n", "Viable seeds found", viable_count);
-	printf("%20s: %.0f\n", "Average SPS", (float)count / (float)(end_time - start_time));
+	printf("%20s: %.0f\n", "Average SPS", (double)count / (double)(end_time - start_time));
 	printf("\n\nPress [ENTER] to exit");
 	getchar();
 	exit(0);
@@ -73,13 +73,13 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 			if (this_time - last_time >= 5 || viable_count > last_viable_count)
 			{
 				sps = (count - last_count) / (this_time - last_time);
-				time_t predict_end = this_time + (float)total_seeds / sps;
+				time_t predict_end = this_time + (double)total_seeds / sps;
 				strftime(eta, 20, "%H:%M:%S", localtime(&predict_end));
-				float percent_done = (float)count / (float)total_seeds * 100;
+				float percent_done = (double)count / (double)total_seeds * 100;
 				if (percent_done < 0)
 					percent_done = 0;
 				long int seconds_passed = this_time - start_time;
-				float eta = (float)(total_seeds - count) / sps;
+				float eta = (double)(total_seeds - count) / sps;
 				if (eta < 0 || percent_done < 0)
 					fprintf(stderr, "\rscanned: %10lli | viable: %3li | sps: %5.0lf | elapsed: %7.0lds", count, viable_count, sps, seconds_passed);
 				else
