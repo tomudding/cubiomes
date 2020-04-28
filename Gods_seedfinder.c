@@ -65,9 +65,12 @@ static DWORD WINAPI statTracker()
 			count = 0;
 			for (int i = 0; i < 128; i++)
 				count += c[i];
-			sps = (count - last_count) / (this_time - last_time);
-			time_t predict_end = this_time + (double)total_seeds / sps;
-			strftime(eta, 20, "%H:%M:%S", localtime(&predict_end));
+			sps = (count) / (this_time - start_time);
+			if (sps > 0)
+			{
+				time_t predict_end = this_time + (double)total_seeds / sps;
+				strftime(eta, 20, "%H:%M:%S", localtime(&predict_end));
+			}
 			float percent_done = (double)count / (double)total_seeds * 100;
 			if (percent_done < 0)
 				percent_done = 0;
