@@ -16,7 +16,7 @@ endif
 .PHONY : all debug libcubiomes clean
 
 all: CFLAGS += -O3 -march=native
-all: find_quadhuts find_compactbiomes clean
+all: find_quadhuts find_compactbiomes god clean
 
 debug: CFLAGS += -DDEBUG -O0 -ggdb3
 debug: find_quadhuts find_compactbiomes clean
@@ -31,7 +31,7 @@ find_compactbiomes: find_compactbiomes.o layers.o generator.o finders.o
 find_compactbiomes.o: find_compactbiomes.c
 	$(CC) -c $(CFLAGS) $<
 
-find_quadhuts: find_quadhuts.o layers.o generator.o finders.o 
+find_quadhuts: find_quadhuts.o layers.o generator.o finders.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 find_quadhuts.o: find_quadhuts.c
@@ -42,7 +42,7 @@ god: Gods_seedfinder.o layers.o generator.o finders.o
 
 Gods_seedfinder.o: Gods_seedfinder.c
 	$(CC) -c $(CFLAGS) $<
-	
+
 xmapview.o: xmapview.c xmapview.h
 	$(CC) -c $(CFLAGS) $<
 
