@@ -65,7 +65,8 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 	last_time = time(NULL);
 	for (s = info.seedStart; s != info.seedEnd; s++)
 	{
-		if (exited) break;
+		if (exited)
+			break;
 		count++;
 		time_t this_time = time(NULL);
 		if (count > 1)
