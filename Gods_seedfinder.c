@@ -27,9 +27,11 @@ float max_ocean = 25; //maximum amount of ocean allowed in percentage
 float step = 8;
 float min_major_biomes = 0; //minimum major biome percent
 time_t last_time;
+int exited = 0;
 int exit_counter = 0;
 void intHandler()
 {
+	exited = 1;
 	printf("\n");
 	if (exit_counter++)
 		exit(0);
@@ -63,6 +65,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 	last_time = time(NULL);
 	for (s = info.seedStart; s != info.seedEnd; s++)
 	{
+		if (exited) break;
 		count++;
 		time_t this_time = time(NULL);
 		if (count > 1)
