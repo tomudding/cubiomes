@@ -224,9 +224,10 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 				int biome = getBiomeAtPos(g, p);
 				if (isOceanic(biome))
 					ocean_count++;
-				for (int i = 0; i < sizeof(biome_exists) / sizeof(int); i++)
-					if (biome == biomes[i])
-						biome_exists[i] = -1;
+				if (abs(x) < info.range && abs(z) < info.range)
+					for (int i = 0; i < sizeof(biome_exists) / sizeof(int); i++)
+						if (biome == biomes[i])
+							biome_exists[i] = -1;
 				if (!isOceanic(biome))
 					for (int i = 0; i < sizeof(major_biome_percent_counter) / sizeof(int); i++)
 						for (int j = 0; j < sizeof(major_biome_percent[i]) / sizeof(enum BiomeID); j++)
@@ -316,7 +317,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 
 int main(int argc, char *argv[])
 {
-	printf("Build: 34\n");
+	printf("Build: 35\n");
 	initBiomes();
 
 	int64_t seedStart, seedEnd;
