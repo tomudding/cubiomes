@@ -52,9 +52,6 @@ static DWORD WINAPI statTracker()
 	last_time = time(NULL);
 	while (!exited)
 	{
-		if (printing)
-			continue;
-
 		time_t this_time = time(NULL);
 		if (this_time - last_time >= 1 || viable_count > last_viable_count)
 		{
@@ -268,16 +265,17 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 
 		viable_count++;
 
-		printing = 1;
-		fprintf(stderr, "\r%*c", 105, ' ');
-		printf("\n%17s: %" PRId64, "Found", s);
-		printf("\n%17s: %i,%i & %i,%i", "Huts", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
-		printf("\n%17s: %5.2f%%", "Ocean", ocean_percent);
+		char out[512];
+		snprintf(out + strlen(out), 512 - strlen(out), "\n%17s: %" PRId64, "Found", s);
+		snprintf(out + strlen(out), 512 - strlen(out), "\n%17s: %i,%i & %i,%i", "Huts", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
+		snprintf(out + strlen(out), 512 - strlen(out), "\n%17s: %5.2f%%", "Ocean", ocean_percent);
 		for (int i = 0; i < sizeof(major_biome_percent_counter) / sizeof(int); i++)
-			printf("\n%17s: %5.2f%%", major_biome_percent_string[i], (major_biome_percent_counter[i] * (step * step) / (fw * fh)) * 100);
-		printf("\n");
+			snprintf(out + strlen(out), 512 - strlen(out), "\n%17s: %5.2f%%", major_biome_percent_string[i], (major_biome_percent_counter[i] * (step * step) / (fw * fh)) * 100);
+		snprintf(out + strlen(out), 512 - strlen(out), "\n");
+		fprintf(stderr, "\r%*c", 105, ' ');
 		fflush(stdout);
-		printing = 0;
+		printf("%s", out);
+		fflush(stdout);
 
 		FILE *fp = fopen("found.csv", "r");
 		if (fp == NULL)
@@ -317,7 +315,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 
 int main(int argc, char *argv[])
 {
-	printf("Build: 35\n");
+	printf("Build: 36\n");
 	initBiomes();
 
 	int64_t seedStart, seedEnd;
