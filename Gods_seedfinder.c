@@ -34,8 +34,13 @@ int exited = 0;
 int exit_counter = 0;
 void intHandler()
 {
-	printf("\nStopping all threads...");
-	exited = 1;
+	if (!exited)
+	{
+		fprintf(stderr, "\r%*c", 105, ' ');
+		printf("\nStopping all threads...\n");
+		fflush(stdout);
+		exited = 1;
+	}
 }
 
 #ifdef USE_PTHREAD
@@ -47,8 +52,11 @@ static DWORD WINAPI statTracker()
 	last_time = time(NULL);
 	while (!exited)
 	{
+		if (printing)
+			continue;
+
 		time_t this_time = time(NULL);
-		if (!printing && (this_time - last_time >= 1 || viable_count > last_viable_count))
+		if (this_time - last_time >= 1 || viable_count > last_viable_count)
 		{
 			count = 0;
 			for (int i = 0; i < 128; i++)
@@ -73,6 +81,11 @@ static DWORD WINAPI statTracker()
 			last_viable_count = viable_count;
 		}
 	}
+
+#ifdef USE_PTHREAD
+	pthread_exit(NULL);
+#endif
+	return 0;
 }
 
 #ifdef USE_PTHREAD
@@ -184,7 +197,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 		// biome enum defined in layers.h
 		enum BiomeID biomes[] = {ice_spikes, bamboo_jungle, desert, plains, ocean, jungle, forest, mushroom_fields, mesa, flower_forest, warm_ocean, frozen_ocean, megaTaiga, roofedForest, extremeHills, swamp, savanna, icePlains};
 		int biome_exists[sizeof(biomes) / sizeof(enum BiomeID)] = {0};
-		enum BiomeID major_biomes[11][16] = {
+		enum BiomeID major_biome_percent[11][16] = {
 			{desert, desert_lakes, desert_hills},
 			{plains, sunflower_plains},
 			{extremeHills, mountains, wooded_mountains, gravelly_mountains, modified_gravelly_mountains, mountain_edge},
@@ -194,10 +207,13 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 			{badlands, badlands_plateau, modified_badlands_plateau, wooded_badlands_plateau, modified_wooded_badlands_plateau, eroded_badlands},
 			{swamp, swamp_hills},
 			{savanna, savanna_plateau, shattered_savanna, shattered_savanna_plateau},
-			{icePlains, ice_spikes},
+			{ice_spikes, snowy_beach, snowy_mountains, snowy_taiga, snowy_taiga_hills, snowy_taiga_mountains, snowy_tundra},
 			{taiga, taiga_hills, taiga_mountains, snowy_taiga, snowy_taiga_hills, snowy_taiga_mountains, giant_tree_taiga, giant_tree_taiga_hills, giant_spruce_taiga, giant_spruce_taiga_hills}};
-		char *major_biomes_string[] = {"desert", "plains", "extremeHills", "jungle", "forest", "roofedForest", "mesa", "swamp", "savanna", "icePlains", "taiga"};
-		int major_biome_counter[11] = {0};
+		char *major_biome_percent_string[11] = {"desert", "plains", "hills & mountains", "jungle", "forest", "roofed forest", "mesa", "swamp", "savanna", "ice & snow", "taiga"};
+		int major_biome_percent_counter[11] = {0};
+		enum BiomeID biome_percent[] = {badlands, badlands_plateau, bamboo_jungle, bamboo_jungle_hills, basalt_deltas, beach, birch_forest, birch_forest_hills, cold_ocean, crimson_forest, dark_forest, dark_forest_hills, deep_cold_ocean, deep_frozen_ocean, deep_lukewarm_ocean, deep_ocean, deep_warm_ocean, desert, desert_hills, desert_lakes, end_barrens, end_highlands, end_midlands, eroded_badlands, flower_forest, forest, frozen_ocean, frozen_river, giant_spruce_taiga, giant_spruce_taiga_hills, giant_tree_taiga, giant_tree_taiga_hills, gravelly_mountains, ice_spikes, jungle, jungle_edge, jungle_hills, lukewarm_ocean, modified_badlands_plateau, modified_gravelly_mountains, modified_jungle, modified_jungle_edge, modified_wooded_badlands_plateau, mountain_edge, mountains, mushroom_fields, mushroom_field_shore, nether_wastes, ocean, plains, river, savanna, savanna_plateau, shattered_savanna, shattered_savanna_plateau, small_end_islands, snowy_beach, snowy_mountains, snowy_taiga, snowy_taiga_hills, snowy_taiga_mountains, snowy_tundra, soul_sand_valley, stone_shore, sunflower_plains, swamp, swamp_hills, taiga, taiga_hills, taiga_mountains, tall_birch_forest, tall_birch_hills, the_end, the_void, warm_ocean, warped_forest, wooded_badlands_plateau, wooded_hills, wooded_mountains};
+		char *biome_percent_string[sizeof(biome_percent) / sizeof(enum BiomeID)] = {"badlands", "badlands_plateau", "bamboo_jungle", "bamboo_jungle_hills", "basalt_deltas", "beach", "birch_forest", "birch_forest_hills", "cold_ocean", "crimson_forest", "dark_forest", "dark_forest_hills", "deep_cold_ocean", "deep_frozen_ocean", "deep_lukewarm_ocean", "deep_ocean", "deep_warm_ocean", "desert", "desert_hills", "desert_lakes", "end_barrens", "end_highlands", "end_midlands", "eroded_badlands", "flower_forest", "forest", "frozen_ocean", "frozen_river", "giant_spruce_taiga", "giant_spruce_taiga_hills", "giant_tree_taiga", "giant_tree_taiga_hills", "gravelly_mountains", "ice_spikes", "jungle", "jungle_edge", "jungle_hills", "lukewarm_ocean", "modified_badlands_plateau", "modified_gravelly_mountains", "modified_jungle", "modified_jungle_edge", "modified_wooded_badlands_plateau", "mountain_edge", "mountains", "mushroom_fields", "mushroom_field_shore", "nether_wastes", "ocean", "plains", "river", "savanna", "savanna_plateau", "shattered_savanna", "shattered_savanna_plateau", "small_end_islands", "snowy_beach", "snowy_mountains", "snowy_taiga", "snowy_taiga_hills", "snowy_taiga_mountains", "snowy_tundra", "soul_sand_valley", "stone_shore", "sunflower_plains", "swamp", "swamp_hills", "taiga", "taiga_hills", "taiga_mountains", "tall_birch_forest", "tall_birch_hills", "the_end", "the_void", "warm_ocean", "warped_forest", "wooded_badlands_plateau", "wooded_hills", "wooded_mountains"};
+		int biome_percent_counter[sizeof(biome_percent) / sizeof(enum BiomeID)] = {0};
 
 		int r = info.fullrange;
 		for (z = -r; z < r; z += step)
@@ -212,10 +228,13 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 					if (biome == biomes[i])
 						biome_exists[i] = -1;
 				if (!isOceanic(biome))
-					for (int i = 0; i < sizeof(major_biome_counter) / sizeof(int); i++)
-						for (int j = 0; j < sizeof(major_biomes[i]) / sizeof(enum BiomeID); j++)
-							if (biome == major_biomes[i][j])
-								major_biome_counter[i]++;
+					for (int i = 0; i < sizeof(major_biome_percent_counter) / sizeof(int); i++)
+						for (int j = 0; j < sizeof(major_biome_percent[i]) / sizeof(enum BiomeID); j++)
+							if (biome == major_biome_percent[i][j])
+								major_biome_percent_counter[i]++;
+				for (int i = 0; i < sizeof(biome_percent) / sizeof(enum BiomeID); i++)
+					if (biome == biome_percent[i])
+						biome_percent_counter[i]++;
 				if (exited)
 					break;
 			}
@@ -232,8 +251,8 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 
 		//check for minimum major biome percent
 		int major_biome_less_than_min = 1;
-		for (int i = 0; i < sizeof(major_biome_counter) / sizeof(int); i++)
-			if ((major_biome_counter[i] * (step * step) / (fw * fh)) * 100 < min_major_biomes)
+		for (int i = 0; i < sizeof(major_biome_percent_counter) / sizeof(int); i++)
+			if ((major_biome_percent_counter[i] * (step * step) / (fw * fh)) * 100 < min_major_biomes)
 				major_biome_less_than_min = 0;
 		if (!major_biome_less_than_min)
 			continue;
@@ -250,22 +269,22 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 
 		printing = 1;
 		fprintf(stderr, "\r%*c", 105, ' ');
-		printf("\n%15s: %" PRId64 "\n", "Found", s);
-		printf("%15s: %d,%i & %i,%i\n", "Huts", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
-		printf("%15s: %.2f%%\n", "Ocean", ocean_percent);
-		for (int i = 0; i < sizeof(major_biome_counter) / sizeof(int); i++)
-			printf("%15s: %.2f%%\n", major_biomes_string[i], (major_biome_counter[i] * (step * step) / (fw * fh)) * 100);
+		printf("\n%17s: %" PRId64, "Found", s);
+		printf("\n%17s: %i,%i & %i,%i", "Huts", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
+		printf("\n%17s: %5.2f%%", "Ocean", ocean_percent);
+		for (int i = 0; i < sizeof(major_biome_percent_counter) / sizeof(int); i++)
+			printf("\n%17s: %5.2f%%", major_biome_percent_string[i], (major_biome_percent_counter[i] * (step * step) / (fw * fh)) * 100);
 		printf("\n");
 		fflush(stdout);
 		printing = 0;
 
-		FILE *fp;
-		if (!(fopen("found.csv", "r")))
+		FILE *fp = fopen("found.csv", "r");
+		if (fp == NULL)
 		{
 			fp = fopen("found.csv", "a");
-			fprintf(fp, "Seed,Huts,Ocean");
-			for (int i = 0; i < sizeof(major_biome_counter) / sizeof(int); i++)
-				fprintf(fp, ",%s", major_biomes_string[i]);
+			fprintf(fp, "seed");
+			for (int i = 0; i < sizeof(biome_percent_counter) / sizeof(int); i++)
+				fprintf(fp, ",%s", biome_percent_string[i]);
 			fprintf(fp, "\n");
 		}
 		else
@@ -273,11 +292,15 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 			fclose(fp);
 			fp = fopen("found.csv", "a");
 		}
-		fprintf(fp, "%" PRId64 "", s);
-		fprintf(fp, ",%i:%i & %i:%i", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
-		fprintf(fp, ",%.2f%%", ocean_percent);
-		for (int i = 0; i < sizeof(major_biome_counter) / sizeof(int); i++)
-			fprintf(fp, ",%.2f%%", (major_biome_counter[i] * (step * step) / (fw * fh)) * 100);
+		fprintf(fp, "%" PRId64, s);
+		//fprintf(fp, ",%i:%i & %i:%i", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
+		//fprintf(fp, ",%.2f%%", ocean_percent);
+
+		for (int i = 0; i < sizeof(biome_percent_counter) / sizeof(int); i++)
+			fprintf(fp, ",%.2f%%", (biome_percent_counter[i] * (step * step) / (fw * fh)) * 100);
+
+		//for (int i = 0; i < sizeof(major_biome_counter) / sizeof(int); i++)
+		//	fprintf(fp, ",%.2f%%", (major_biome_counter[i] * (step * step) / (fw * fh)) * 100);
 		fprintf(fp, "\n");
 		fclose(fp);
 	}
@@ -293,13 +316,8 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 
 int main(int argc, char *argv[])
 {
-	printf("Build: 32\n");
+	printf("Build: 33\n");
 	initBiomes();
-
-	start_time = time(NULL);
-	char time_start[20];
-	strftime(time_start, 20, "%m/%d/%Y %H:%M:%S", localtime(&start_time));
-	printf("Started: %s\n", time_start);
 
 	int64_t seedStart, seedEnd;
 	unsigned int threads, t, range, fullrange;
@@ -377,6 +395,11 @@ int main(int argc, char *argv[])
 		   "Search radius = %u.\n",
 		   seedStart, seedEnd, threads, range);
 
+	start_time = time(NULL);
+	char time_start[20];
+	strftime(time_start, 20, "%m/%d/%Y %H:%M:%S", localtime(&start_time));
+	printf("Started: %s\n", time_start);
+
 	thread_id_t threadID[threads];
 	struct compactinfo_t info[threads];
 
@@ -396,6 +419,7 @@ int main(int argc, char *argv[])
 	}
 	info[threads - 1].seedEnd = seedEnd;
 
+	signal(SIGINT, intHandler);
 	// start threads
 #ifdef USE_PTHREAD
 
@@ -422,8 +446,6 @@ int main(int argc, char *argv[])
 		threadID[t] = CreateThread(NULL, 0, searchCompactBiomesThread, (LPVOID)&info[t], 0, NULL);
 	}
 
-	signal(SIGINT, intHandler);
-
 	WaitForMultipleObjects(threads, threadID, TRUE, INFINITE);
 	exited = 1;
 
@@ -444,6 +466,7 @@ int main(int argc, char *argv[])
 	printf("%20s: %.0f\n", "Average SPS", (double)count / (double)(end_time - start_time));
 
 	printf("\n\nPress [ENTER] to exit\n");
+	fflush(stdout);
 	getchar();
 
 	return 0;
