@@ -119,9 +119,9 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 		applySeed(&g, s);
 		int x, z;
 
+		int monument_count = 0;
 		if (info.withMonument)
 		{
-			int monument_found = 0;
 			int r = info.fullrange / MONUMENT_CONFIG.regionSize;
 			for (z = -r; z < r; z++)
 			{
@@ -131,22 +131,18 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 					p = getLargeStructurePos(MONUMENT_CONFIG, s, x, z);
 					if (isViableOceanMonumentPos(g, cache, p.x, p.z))
 						if (abs(p.x) < info.fullrange && abs(p.z) < info.fullrange)
-							monument_found = 1;
-					if (monument_found)
-						break;
+							monument_count++;
 				}
-				if (monument_found)
-					break;
 			}
-			if (!monument_found)
+			if (monument_count == 0)
 				continue;
 		}
 
 		Pos goodhuts[2];
+		int hut_count = 0;
 		if (info.withHut)
 		{
 			Pos huts[100];
-			int counter = 0;
 			int r = info.fullrange / SWAMP_HUT_CONFIG.regionSize;
 			for (z = -r; z < r; z++)
 			{
@@ -158,8 +154,8 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 					{
 						if (abs(p.x) < info.fullrange && abs(p.z) < info.fullrange)
 						{
-							huts[counter] = p;
-							counter++;
+							huts[hut_count] = p;
+							hut_count++;
 							//printf("%i\n", huts[0].x);
 						}
 					}
@@ -167,9 +163,9 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 			}
 
 			int huts_found = 0;
-			for (int i = 0; i < counter; i++)
+			for (int i = 0; i < hut_count; i++)
 			{
-				for (int j = 0; j < counter; j++)
+				for (int j = 0; j < hut_count; j++)
 				{
 					if (j == i)
 						continue;
@@ -270,28 +266,31 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 
 		viable_count++;
 
+		char out[512];
+		snprintf(out, 512, "%" PRId64, s);
+		snprintf(out + strlen(out), 512 - strlen(out), ",%i", hut_count);
+		snprintf(out + strlen(out), 512 - strlen(out), ",%i", monument_count);
+		for (int i = 0; i < sizeof(biome_percent_counter) / sizeof(int); i++)
+			snprintf(out + strlen(out), 512 - strlen(out), ",%.2f%%", (biome_percent_counter[i] * (step * step) / (fw * fh)) * 100);
+		snprintf(out + strlen(out), 512 - strlen(out), "\n");
+
 		if (raw)
 		{
-			char out[512];
-			snprintf(out, 512, "%" PRId64, s);
-			for (int i = 0; i < sizeof(biome_percent_counter) / sizeof(int); i++)
-				snprintf(out + strlen(out), 512 - strlen(out), ",%.2f%%", (biome_percent_counter[i] * (step * step) / (fw * fh)) * 100);
-			snprintf(out + strlen(out), 512 - strlen(out), "\n");
 			printf("%s", out);
 			fflush(stdout);
 		}
 		else
 		{
-			char out[512];
-			snprintf(out, 512, "\n%17s: %" PRId64, "Found", s);
-			snprintf(out + strlen(out), 512 - strlen(out), "\n%17s: %i,%i & %i,%i", "Huts", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
-			snprintf(out + strlen(out), 512 - strlen(out), "\n%17s: %5.2f%%", "Ocean", ocean_percent);
+			char info_out[512];
+			snprintf(info_out, 512, "\n%17s: %" PRId64, "Found", s);
+			snprintf(info_out + strlen(info_out), 512 - strlen(info_out), "\n%17s: %i,%i & %i,%i", "Huts", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
+			snprintf(info_out + strlen(info_out), 512 - strlen(info_out), "\n%17s: %5.2f%%", "Ocean", ocean_percent);
 			for (int i = 0; i < sizeof(major_biome_percent_counter) / sizeof(int); i++)
-				snprintf(out + strlen(out), 512 - strlen(out), "\n%17s: %5.2f%%", major_biome_percent_string[i], (major_biome_percent_counter[i] * (step * step) / (fw * fh)) * 100);
-			snprintf(out + strlen(out), 512 - strlen(out), "\n");
+				snprintf(info_out + strlen(info_out), 512 - strlen(info_out), "\n%17s: %5.2f%%", major_biome_percent_string[i], (major_biome_percent_counter[i] * (step * step) / (fw * fh)) * 100);
+			snprintf(info_out + strlen(info_out), 512 - strlen(info_out), "\n");
 			fprintf(stderr, "\r%*c", 105, ' ');
 			fflush(stdout);
-			printf("%s", out);
+			printf("%s", info_out);
 			fflush(stdout);
 		}
 
@@ -309,16 +308,19 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 			fclose(fp);
 			fp = fopen("found.csv", "a");
 		}
-		fprintf(fp, "%" PRId64, s);
+		//fprintf(fp, "%" PRId64, s);
 		//fprintf(fp, ",%i:%i & %i:%i", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
 		//fprintf(fp, ",%.2f%%", ocean_percent);
 
-		for (int i = 0; i < sizeof(biome_percent_counter) / sizeof(int); i++)
-			fprintf(fp, ",%.2f%%", (biome_percent_counter[i] * (step * step) / (fw * fh)) * 100);
+		//fprintf(fp, ",%i", hut_count);
+		//fprintf(fp, ",%i", monument_count);
+
+		//for (int i = 0; i < sizeof(biome_percent_counter) / sizeof(int); i++)
+		//	fprintf(fp, ",%.2f%%", (biome_percent_counter[i] * (step * step) / (fw * fh)) * 100);
 
 		//for (int i = 0; i < sizeof(major_biome_counter) / sizeof(int); i++)
 		//	fprintf(fp, ",%.2f%%", (major_biome_counter[i] * (step * step) / (fw * fh)) * 100);
-		fprintf(fp, "\n");
+		fprintf(fp, "%s", out);
 		fclose(fp);
 
 		if (info.genimage == 'y')
@@ -435,7 +437,7 @@ int main(int argc, char *argv[])
 	if (argc <= 6 || sscanf(argv[6], "%c", &genimage) != 1)
 	{
 		printf("Generate images? [y/n]: ");
-		if (!scanf("%c", &genimage))
+		if (!scanf(" %c", &genimage))
 		{
 			printf("That's not right");
 			exit(1);
