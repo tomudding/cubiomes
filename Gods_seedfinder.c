@@ -299,6 +299,8 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 		{
 			fp = fopen("found.csv", "a");
 			fprintf(fp, "seed");
+			fprintf(fp, ",huts");
+			fprintf(fp, ",monuments");
 			for (int i = 0; i < sizeof(biome_percent_counter) / sizeof(int); i++)
 				fprintf(fp, ",%s", biome_percent_string[i]);
 			fprintf(fp, "\n");
