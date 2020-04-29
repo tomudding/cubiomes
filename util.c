@@ -194,3 +194,38 @@ int savePPM(const char *path, const unsigned char *pixels, const unsigned int sx
     return (unsigned int)written != 3*sx*sy;
 }
 
+int saveSVG(const char *path, const unsigned char *pixels, const unsigned int sx, const unsigned int sy)
+{
+	FILE *fp = fopen(path, "wb");
+	
+	if (!fp)
+		return -1;
+	fprintf(fp, "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" width=\"%d\" height=\"%d\">", sx, sy);
+	unsigned int i,j;
+	
+	for (j = 0; j < sy; j++)
+	{
+		for (i = 0; i < sx; i++)
+		{
+			const unsigned char *rgb = pixels + (j*sy+i)*3*sizeof(char);
+			if (i+1 < sx)
+			{
+				unsigned int nextDiffPixOffset = 1;
+				const unsigned char *rgb2 = pixels + (j*sy+i+nextDiffPixOffset) * 3 * sizeof(char);
+				while (rgb[0] == rgb2[0] && rgb[1] == rgb2[1] && rgb[2] == rgb2[2])
+				{
+					nextDiffPixOffset++;
+					rgb2 = pixels + (j*sy+i+nextDiffPixOffset) * 3 * sizeof(char);
+				}
+				fprintf(fp, "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"1\" style=\"fill:rgb(%d,%d,%d)\" />\n", i,j, nextDiffPixOffset, rgb[0], rgb[1], rgb[2]);		
+				i = i+nextDiffPixOffset-1;
+				continue;
+			}
+			fprintf(fp, "<rect x=\"%d\" y=\"%d\" width=\"1\" height=\"1\" style=\"fill:rgb(%d,%d,%d)\" />\n", i,j,rgb[0], rgb[1], rgb[2]);
+		}
+	}
+	fprintf(fp, "</svg>");
+	fclose(fp);
+	return 0;
+}
+
