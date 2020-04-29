@@ -246,8 +246,8 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 
 		//check for max ocean percent
 		float ocean_percent = (ocean_count * (step * step) / (fw * fh)) * 100;
-		if (ocean_percent > max_ocean)
-			continue;
+		//if (ocean_percent > max_ocean)
+		//	continue;
 
 		//check for minimum major biome percent
 		int major_biome_less_than_min = 1;
@@ -316,7 +316,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 
 int main(int argc, char *argv[])
 {
-	printf("Build: 33\n");
+	printf("Build: 34\n");
 	initBiomes();
 
 	int64_t seedStart, seedEnd;
