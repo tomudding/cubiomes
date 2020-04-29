@@ -38,7 +38,7 @@ find_quadhuts.o: find_quadhuts.c
 	$(CC) -c $(CFLAGS) $<
 
 god: CFLAGS += -O3 -march=native
-god: Gods_seedfinder.o layers.o generator.o finders.o
+god: Gods_seedfinder.o layers.o generator.o finders.o util.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 Gods_seedfinder.o: Gods_seedfinder.c
