@@ -4,24 +4,6 @@
 #include <time.h>
 #include <signal.h>
 #include "util.h"
-#ifdef _WIN32
-//  For Windows (32- and 64-bit)
-#include <windows.h>
-#define SLEEP(msecs) Sleep(msecs)
-#elif __unix
-//  For linux, OSX, and other unixes
-#include <time.h>
-#define SLEEP(msecs)                      \
-	do                                    \
-	{                                     \
-		struct timespec ts;               \
-		ts.tv_sec = msecs / 1000;         \
-		ts.tv_nsec = msecs % 1000 * 1000; \
-		nanosleep(&ts, NULL);             \
-	} while (0)
-#else
-#error "Unknown system"
-#endif
 
 struct compactinfo_t
 {
@@ -49,7 +31,6 @@ int64_t total_seeds = 0;
 float max_ocean = 25; //maximum amount of ocean allowed in percentage
 float step = 8;
 float min_major_biomes = 0; //minimum major biome percent
-time_t last_time;
 int printing = 0;
 int exited = 0;
 int exit_counter = 0;
@@ -72,10 +53,12 @@ static void *statTracker()
 static DWORD WINAPI statTracker()
 #endif
 {
-	SLEEP(1000);
+	time_t last_time = time(NULL);
 	while (!exited)
 	{
 		time_t this_time = time(NULL);
+		if (this_time - last_time < 1)
+			continue;
 		count = 0;
 		for (int i = 0; i < 128; i++)
 			count += c[i];
@@ -102,17 +85,21 @@ static DWORD WINAPI statTracker()
 			elapsed_seconds = elapsed % 60;
 		}
 
-		unsigned int eta = (double)(total_seeds - count) / sps;
+		unsigned int eta = 0;
 		int eta_days = -1;
 		int eta_hours = -1;
 		int eta_minutes = -1;
 		int eta_seconds = -1;
-		if (eta < 8553600)
+		if (sps > 0)
 		{
-			eta_days = eta / 60 / 60 / 24;
-			eta_hours = eta / 60 / 60 % 24;
-			eta_minutes = eta / 60 % 60;
-			eta_seconds = eta % 60;
+			eta = (double)(total_seeds - count) / sps;
+			if (eta < 8553600)
+			{
+				eta_days = eta / 60 / 60 / 24;
+				eta_hours = eta / 60 / 60 % 24;
+				eta_minutes = eta / 60 % 60;
+				eta_seconds = eta % 60;
+			}
 		}
 
 		fprintf(stderr, "\rscanned: %18" PRId64 " | viable: %3li | sps: %9.0lf | elapsed: %02i:%02i:%02i:%02i", count, viable_count, sps, elapsed_days, elapsed_hours, elapsed_minutes, elapsed_seconds);
@@ -122,7 +109,6 @@ static DWORD WINAPI statTracker()
 		last_time = this_time;
 		last_count = count;
 		last_viable_count = viable_count;
-		SLEEP(1000);
 	}
 
 #ifdef USE_PTHREAD
@@ -525,7 +511,7 @@ int main(int argc, char *argv[])
 
 	if (!raw)
 	{
-		printf("Build: 39\n");
+		printf("Build: 40\n");
 		printf("Starting search through seeds %" PRId64 " to %" PRId64 ", using %u threads.\n"
 			   "Search radius = %u.\n",
 			   seedStart, seedEnd, threads, range);
