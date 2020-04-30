@@ -10,7 +10,6 @@
 #define SLEEP(msecs) Sleep(msecs)
 #elif __unix
 //  For linux, OSX, and other unixes
-#define _POSIX_C_SOURCE 199309L // or greater
 #include <time.h>
 #define SLEEP(msecs)                      \
 	do                                    \
@@ -526,7 +525,7 @@ int main(int argc, char *argv[])
 
 	if (!raw)
 	{
-		printf("Build: 38\n");
+		printf("Build: 39\n");
 		printf("Starting search through seeds %" PRId64 " to %" PRId64 ", using %u threads.\n"
 			   "Search radius = %u.\n",
 			   seedStart, seedEnd, threads, range);
