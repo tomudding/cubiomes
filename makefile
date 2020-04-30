@@ -16,10 +16,10 @@ endif
 .PHONY : all debug libcubiomes clean
 
 all: CFLAGS += -O3 -march=native
-all: find_quadhuts find_compactbiomes god clean
+all: god clean
 
 debug: CFLAGS += -DDEBUG -O0 -ggdb3
-debug: find_quadhuts find_compactbiomes clean
+debug: god clean
 
 libcubiomes: CFLAGS += -O3 -fPIC
 libcubiomes: layers.o generator.o finders.o util.o
