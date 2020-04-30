@@ -351,8 +351,8 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 			// Map the biomes to a color buffer and save to an image.
 			biomesToImage(rgb, biomeColours, biomes, areaWidth, areaHeight, scale, 2);
 			char filename[20];
-			snprintf(filename, 20, "%" PRId64 ".ppm", s);
-			savePPM(filename, rgb, imgWidth, imgHeight);
+			snprintf(filename, 20, "%" PRId64 ".svg", s);
+			saveSVG(filename, rgb, imgWidth, imgHeight);
 
 			// Clean up.
 			free(biomes);
