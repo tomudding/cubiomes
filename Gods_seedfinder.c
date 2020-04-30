@@ -4,6 +4,25 @@
 #include <time.h>
 #include <signal.h>
 #include "util.h"
+#ifdef _WIN32
+//  For Windows (32- and 64-bit)
+#include <windows.h>
+#define SLEEP(msecs) Sleep(msecs)
+#elif __unix
+//  For linux, OSX, and other unixes
+#define _POSIX_C_SOURCE 199309L // or greater
+#include <time.h>
+#define SLEEP(msecs)                      \
+	do                                    \
+	{                                     \
+		struct timespec ts;               \
+		ts.tv_sec = msecs / 1000;         \
+		ts.tv_nsec = msecs % 1000 * 1000; \
+		nanosleep(&ts, NULL);             \
+	} while (0)
+#else
+#error "Unknown system"
+#endif
 
 struct compactinfo_t
 {
@@ -41,7 +60,7 @@ void intHandler()
 {
 	if (!exited)
 	{
-		fprintf(stderr, "\r%*c", 105, ' ');
+		fprintf(stderr, "\r%*c", 128, ' ');
 		printf("\nStopping all threads...\n");
 		fflush(stdout);
 		exited = 1;
@@ -54,34 +73,57 @@ static void *statTracker()
 static DWORD WINAPI statTracker()
 #endif
 {
-	last_time = time(NULL);
+	SLEEP(1000);
 	while (!exited)
 	{
 		time_t this_time = time(NULL);
-		if (this_time - last_time >= 1 || viable_count > last_viable_count)
+		count = 0;
+		for (int i = 0; i < 128; i++)
+			count += c[i];
+		sps = (count) / (this_time - start_time);
+		if (sps > 0)
 		{
-			count = 0;
-			for (int i = 0; i < 128; i++)
-				count += c[i];
-			sps = (count) / (this_time - start_time);
-			if (sps > 0)
-			{
-				time_t predict_end = this_time + (double)total_seeds / sps;
-				strftime(eta, 20, "%H:%M:%S", localtime(&predict_end));
-			}
-			float percent_done = (double)count / (double)total_seeds * 100;
-			if (percent_done < 0)
-				percent_done = 0;
-			long int seconds_passed = this_time - start_time;
-			float eta = (double)(total_seeds - count) / sps;
-			fprintf(stderr, "\rscanned: %18" PRId64 " | viable: %3li | sps: %9.0lf | elapsed: %7.0lds", count, viable_count, sps, seconds_passed);
-			if (eta > 0 || percent_done > 0)
-				fprintf(stderr, " | %3.2lf%% | eta: %7.0fs  ", percent_done, eta);
-			fflush(stdout);
-			last_time = this_time;
-			last_count = count;
-			last_viable_count = viable_count;
+			time_t predict_end = this_time + (double)total_seeds / sps;
+			strftime(eta, 20, "%H:%M:%S", localtime(&predict_end));
 		}
+		float percent_done = (double)count / (double)total_seeds * 100;
+		if (percent_done < 0)
+			percent_done = 0;
+
+		unsigned int elapsed = this_time - start_time;
+		int elapsed_days = -1;
+		int elapsed_hours = -1;
+		int elapsed_minutes = -1;
+		int elapsed_seconds = -1;
+		if (elapsed < 8553600)
+		{
+			elapsed_days = elapsed / 60 / 60 / 24;
+			elapsed_hours = elapsed / 60 / 60 % 24;
+			elapsed_minutes = elapsed / 60 % 60;
+			elapsed_seconds = elapsed % 60;
+		}
+
+		unsigned int eta = (double)(total_seeds - count) / sps;
+		int eta_days = -1;
+		int eta_hours = -1;
+		int eta_minutes = -1;
+		int eta_seconds = -1;
+		if (eta < 8553600)
+		{
+			eta_days = eta / 60 / 60 / 24;
+			eta_hours = eta / 60 / 60 % 24;
+			eta_minutes = eta / 60 % 60;
+			eta_seconds = eta % 60;
+		}
+
+		fprintf(stderr, "\rscanned: %18" PRId64 " | viable: %3li | sps: %9.0lf | elapsed: %02i:%02i:%02i:%02i", count, viable_count, sps, elapsed_days, elapsed_hours, elapsed_minutes, elapsed_seconds);
+		if (eta > 0 || percent_done > 0)
+			fprintf(stderr, " | %6.2lf%% | eta: %02i:%02i:%02i:%02i  ", percent_done, eta_days, eta_hours, eta_minutes, eta_seconds);
+		fflush(stdout);
+		last_time = this_time;
+		last_count = count;
+		last_viable_count = viable_count;
+		SLEEP(1000);
 	}
 
 #ifdef USE_PTHREAD
@@ -119,30 +161,12 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 		applySeed(&g, s);
 		int x, z;
 
-		int monument_count = 0;
-		if (info.withMonument)
-		{
-			int r = info.fullrange / MONUMENT_CONFIG.regionSize;
-			for (z = -r; z < r; z++)
-			{
-				for (x = -r; x < r; x++)
-				{
-					Pos p;
-					p = getLargeStructurePos(MONUMENT_CONFIG, s, x, z);
-					if (isViableOceanMonumentPos(g, cache, p.x, p.z))
-						if (abs(p.x) < info.fullrange && abs(p.z) < info.fullrange)
-							monument_count++;
-				}
-			}
-			if (monument_count == 0)
-				continue;
-		}
-
 		Pos goodhuts[2];
 		int hut_count = 0;
 		if (info.withHut)
 		{
 			Pos huts[100];
+			int huts_found = 0;
 			int r = info.fullrange / SWAMP_HUT_CONFIG.regionSize;
 			for (z = -r; z < r; z++)
 			{
@@ -157,37 +181,79 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 							huts[hut_count] = p;
 							hut_count++;
 							//printf("%i\n", huts[0].x);
+							for (int i = 0; i < hut_count; i++)
+							{
+								for (int j = 0; j < hut_count; j++)
+								{
+									if (j == i)
+										continue;
+									float dx, dz;
+									dx = abs(huts[i].x - huts[j].x);
+									dz = abs(huts[i].z - huts[j].z);
+									if (sqrt((dx * dx) + (dz * dz)) <= 200)
+									{
+										//printf("%i\n", counter);
+										//printf("%f\n",(sqrt((dx*dx)+(dz*dz))));
+										//printf("%i, %i, %i, %i\n",huts[i].x,huts[i].z,huts[j].x,huts[j].z);
+										goodhuts[0] = huts[i];
+										goodhuts[1] = huts[j];
+										huts_found = 1;
+									}
+									if (exited)
+										break;
+									//if (huts_found)
+									//	break;
+								}
+								if (exited)
+									break;
+								//if (huts_found)
+								//	break;
+							}
 						}
 					}
-				}
-			}
-
-			int huts_found = 0;
-			for (int i = 0; i < hut_count; i++)
-			{
-				for (int j = 0; j < hut_count; j++)
-				{
-					if (j == i)
-						continue;
-					float dx, dz;
-					dx = abs(huts[i].x - huts[j].x);
-					dz = abs(huts[i].z - huts[j].z);
-					if (sqrt((dx * dx) + (dz * dz)) <= 200)
-					{
-						//printf("%i\n", counter);
-						//printf("%f\n",(sqrt((dx*dx)+(dz*dz))));
-						//printf("%i, %i, %i, %i\n",huts[i].x,huts[i].z,huts[j].x,huts[j].z);
-						goodhuts[0] = huts[i];
-						goodhuts[1] = huts[j];
-						huts_found = 1;
-					}
-					if (huts_found)
+					if (exited)
 						break;
+					//if (huts_found)
+					//	break;
 				}
-				if (huts_found)
+				if (exited)
 					break;
+				//if (huts_found)
+				//	break;
 			}
+			if (exited)
+				break;
 			if (!huts_found)
+				continue;
+		}
+
+		int monument_count = 0;
+		if (info.withMonument)
+		{
+			int r = info.fullrange / MONUMENT_CONFIG.regionSize;
+			for (z = -r; z < r; z++)
+			{
+				for (x = -r; x < r; x++)
+				{
+					Pos p;
+					p = getLargeStructurePos(MONUMENT_CONFIG, s, x, z);
+					if (isViableOceanMonumentPos(g, cache, p.x, p.z))
+						if (abs(p.x) < info.fullrange && abs(p.z) < info.fullrange)
+							monument_count++;
+
+					if (exited)
+						break;
+					//if (monument_count > 0)
+					//	break;
+				}
+				if (exited)
+					break;
+				//if (monument_count > 0)
+				//	break;
+			}
+			if (exited)
+				break;
+			if (monument_count == 0)
 				continue;
 		}
 
@@ -288,7 +354,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 			for (int i = 0; i < sizeof(major_biome_percent_counter) / sizeof(int); i++)
 				snprintf(info_out + strlen(info_out), 512 - strlen(info_out), "\n%17s: %5.2f%%", major_biome_percent_string[i], (major_biome_percent_counter[i] * (step * step) / (fw * fh)) * 100);
 			snprintf(info_out + strlen(info_out), 512 - strlen(info_out), "\n");
-			fprintf(stderr, "\r%*c", 105, ' ');
+			fprintf(stderr, "\r%*c", 128, ' ');
 			fflush(stdout);
 			printf("%s", info_out);
 			fflush(stdout);
@@ -457,11 +523,10 @@ int main(int argc, char *argv[])
 	// TODO: simple structure filter
 	withHut = 1;
 	withMonument = 1;
-	total_seeds = (uint64_t)seedEnd - (uint64_t)seedStart;
 
 	if (!raw)
 	{
-		printf("Build: 37\n");
+		printf("Build: 38\n");
 		printf("Starting search through seeds %" PRId64 " to %" PRId64 ", using %u threads.\n"
 			   "Search radius = %u.\n",
 			   seedStart, seedEnd, threads, range);
@@ -475,6 +540,12 @@ int main(int argc, char *argv[])
 	struct compactinfo_t info[threads];
 
 	// store thread information
+	if (seedStart == 0 && seedEnd == -1)
+	{
+		seedStart = -999999999999999999;
+		seedEnd = 999999999999999999;
+	}
+	total_seeds = (uint64_t)seedEnd - (uint64_t)seedStart;
 	uint64_t seedCnt = ((uint64_t)seedEnd - (uint64_t)seedStart) / threads;
 	for (t = 0; t < threads; t++)
 	{
@@ -533,7 +604,7 @@ int main(int argc, char *argv[])
 		return 0;
 
 	printing = 1;
-	fprintf(stderr, "\r%*c", 105, ' ');
+	fprintf(stderr, "\r%*c", 128, ' ');
 	count = 0;
 	for (int i = 0; i < 128; i++)
 		count += c[i];
