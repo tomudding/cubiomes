@@ -15,7 +15,6 @@ struct compactinfo_t
 	int minscale;
 	int thread_id;
 	char genimage;
-	int raw;
 };
 
 int64_t count = 0;
@@ -553,11 +552,11 @@ int main(int argc, char *argv[])
 		// start threads
 #ifdef USE_PTHREAD
 
-	if (!raw)
-	{
+	//if (!raw)
+	//{
 		pthread_t stats;
 		pthread_create(&stats, NULL, statTracker, NULL);
-	}
+	//}
 
 	for (t = 0; t < threads; t++)
 	{
@@ -572,7 +571,7 @@ int main(int argc, char *argv[])
 
 #else
 
-	if (!raw)
+	//if (!raw)
 		CreateThread(NULL, 0, statTracker, NULL, 0, NULL);
 
 	for (t = 0; t < threads; t++)
