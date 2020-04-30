@@ -11,5 +11,7 @@ int biomesToImage(unsigned char *pixels,
 
 int savePPM(const char* path, const unsigned char *pixels, 
         const unsigned int sx, const unsigned int sy);
+int saveSVG(const char* path, const unsigned char *pixels, 
+        const unsigned int sx, const unsigned int sy);
 
 #endif
