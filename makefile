@@ -44,6 +44,20 @@ god: Gods_seedfinder.o layers.o generator.o finders.o util.o
 Gods_seedfinder.o: Gods_seedfinder.c
 	$(CC) -c $(CFLAGS) $<
 
+client: CFLAGS += -O3 -march=native
+client: client.o layers.o generator.o finders.o
+	$(CC) -o $@ $^ $(LDFLAGS)
+
+client.o: client.c
+	$(CC) -c $(CFLAGS) $<
+
+server: CFLAGS += -O3 -march=native
+server: server.o layers.o generator.o finders.o util.o
+	$(CC) -o $@ $^ $(LDFLAGS)
+
+server.o: server.c
+	$(CC) -c $(CFLAGS) $<
+
 gen_image.wasm: finders.c layers.c generator.c util.c gen_image.c
 	emcc -o $@ -Os $^ -s WASM=1
 

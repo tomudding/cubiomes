@@ -314,6 +314,52 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 		if (!all_biomes)
 			continue;
 
+		//get spawn biome
+		Pos spawn = getSpawn(MC_1_15, &g, cache, s);
+		int spawn_biome = getBiomeAtPos(g, spawn);
+		char *spawn_biome_string;
+		for (int i = 0; i < sizeof(biome_percent) / sizeof(enum BiomeID); i++)
+			if (spawn_biome == biome_percent[i])
+				spawn_biome_string = biome_percent_string[i];
+
+		//get closest village
+		Pos villages[500] = {0};
+		int village_count = 0;
+		r = info.fullrange / VILLAGE_CONFIG.regionSize;
+		for (z = -r; z < r; z++)
+		{
+			for (x = -r; x < r; x++)
+			{
+				Pos p;
+				p = getLargeStructurePos(VILLAGE_CONFIG, s, x, z);
+				if (isViableVillagePos(g, cache, p.x, p.z))
+					if (abs(p.x) < info.fullrange && abs(p.z) < info.fullrange)
+						villages[village_count++] = p;
+				if (exited)
+					break;
+			}
+			if (exited)
+				break;
+		}
+		if (exited)
+			break;
+
+		Pos closest_village;
+		int closest_village_distance = -1;
+		for (int i = 0; i < sizeof(villages) / sizeof(villages[0]); i++)
+		{
+			if (villages[i].x == 0 && villages[i].z == 0)
+				break;
+			float dx, dz;
+			dx = abs(spawn.x - villages[i].x);
+			dz = abs(spawn.z - villages[i].z);
+			if (sqrt((dx * dx) + (dz * dz)) < closest_village_distance || closest_village_distance == -1)
+			{
+				closest_village = villages[i];
+				closest_village_distance = sqrt((dx * dx) + (dz * dz));
+			}
+		}
+
 		viable_count++;
 
 		char out[512];
@@ -333,6 +379,8 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 		{
 			char info_out[512];
 			snprintf(info_out, 512, "\n%17s: %" PRId64, "Found", s);
+			snprintf(info_out + strlen(info_out), 512 - strlen(info_out), "\n%17s: %s", "Spawn biome", spawn_biome_string);
+			snprintf(info_out + strlen(info_out), 512 - strlen(info_out), "\n%17s: %i,%i", "Closest village", closest_village.x, closest_village.z);
 			snprintf(info_out + strlen(info_out), 512 - strlen(info_out), "\n%17s: %i,%i & %i,%i", "Huts", goodhuts[0].x, goodhuts[0].z, goodhuts[1].x, goodhuts[1].z);
 			snprintf(info_out + strlen(info_out), 512 - strlen(info_out), "\n%17s: %5.2f%%", "Ocean", ocean_percent);
 			for (int i = 0; i < sizeof(major_biome_percent_counter) / sizeof(int); i++)
@@ -507,6 +555,7 @@ int main(int argc, char *argv[])
 	// TODO: simple structure filter
 	withHut = 1;
 	withMonument = 1;
+	start_time = time(NULL);
 
 	if (!raw)
 	{
@@ -514,7 +563,6 @@ int main(int argc, char *argv[])
 		printf("Starting search through seeds %" PRId64 " to %" PRId64 ", using %u threads.\n"
 			   "Search radius = %u.\n",
 			   seedStart, seedEnd, threads, range);
-		start_time = time(NULL);
 		char time_start[20];
 		strftime(time_start, 20, "%m/%d/%Y %H:%M:%S", localtime(&start_time));
 		printf("Started: %s\n", time_start);
@@ -554,8 +602,8 @@ int main(int argc, char *argv[])
 
 	//if (!raw)
 	//{
-		pthread_t stats;
-		pthread_create(&stats, NULL, statTracker, NULL);
+	pthread_t stats;
+	pthread_create(&stats, NULL, statTracker, NULL);
 	//}
 
 	for (t = 0; t < threads; t++)
@@ -572,7 +620,7 @@ int main(int argc, char *argv[])
 #else
 
 	//if (!raw)
-		CreateThread(NULL, 0, statTracker, NULL, 0, NULL);
+	CreateThread(NULL, 0, statTracker, NULL, 0, NULL);
 
 	for (t = 0; t < threads; t++)
 	{
