@@ -44,11 +44,11 @@ god: Gods_seedfinder.o layers.o generator.o finders.o util.o
 Gods_seedfinder.o: Gods_seedfinder.c
 	$(CC) -c $(CFLAGS) $<
 
-client: CFLAGS += -O3 -march=native
-client: client.o layers.o generator.o finders.o
+searcher: CFLAGS += -O3 -march=native
+searcher: searcher.o layers.o generator.o finders.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-client.o: client.c
+searcher.o: searcher.c
 	$(CC) -c $(CFLAGS) $<
 
 server: CFLAGS += -O3 -march=native
