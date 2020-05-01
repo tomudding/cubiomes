@@ -1,0 +1,33 @@
+<form onsubmit="gen(document.getElementById('seed').value); return false;">
+  <input type="text" id="seed">
+  <input type="submit">
+</form>
+<canvas height="512" width="512"  id="c"/></canvas>
+<script>
+(async () => {
+  const response = await fetch('gen_image.wasm');
+  const wasm = await response.arrayBuffer();
+  const gen_image = await WebAssembly.compile(wasm);
+  const instance = await WebAssembly.instantiate(
+    gen_image,
+    {
+      wasi_snapshot_preview1: { 
+        fd_write(){},
+        fd_close(){},
+        fd_seek(){},
+        proc_exit(){},
+      }
+    },
+  );
+
+  const ctx = document.getElementById('c').getContext('2d');
+
+  window.gen = inputString => {
+    const seed = Number(inputString);
+    const pointer = instance.exports.gen_image(seed);
+    const data = new Uint8ClampedArray(instance.exports.memory.buffer, pointer, 512 * 512 * 4);
+    const img = new ImageData(data, 512, 512);
+    ctx.putImageData(img, 0, 0);
+  }
+})();
+</script>
