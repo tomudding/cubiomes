@@ -1,7 +1,6 @@
 #include "finders.h"
 #include "generator.h"
 #include "math.h"
-#include "util.h"
 
 long viable_count = 0;
 long passed_filter = 0;

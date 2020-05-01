@@ -52,7 +52,7 @@ client.o: client.c
 	$(CC) -c $(CFLAGS) $<
 
 server: CFLAGS += -O3 -march=native
-server: server.o layers.o generator.o finders.o util.o
+server: server.o layers.o generator.o finders.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 server.o: server.c
