@@ -129,7 +129,8 @@ void initBiomeTypeColours(unsigned char biomeColours[256][3])
 int biomesToImage(unsigned char *pixels, 
         const unsigned char biomeColours[256][3], const int *biomes, 
         const unsigned int sx, const unsigned int sy, 
-        const unsigned int pixscale, const int flip)
+        const unsigned int pixscale, const int flip,
+        int alpha)
 {
     unsigned int i, j;
     int containsInvalidBiomes = 0;
@@ -171,10 +172,12 @@ int biomesToImage(unsigned char *pixels,
                     else 
                         idx += (sx * pixscale) * ((pixscale * (sy-1-j)) + m);
                     
-                    unsigned char *pix = pixels + 3*idx;
+                    unsigned char *pix = pixels + (alpha ? 4 : 3)*idx;
                     pix[0] = (unsigned char)r;
                     pix[1] = (unsigned char)g;
                     pix[2] = (unsigned char)b;
+                    if (alpha)
+                      pix[3] = (unsigned char)255;
                 }
             }
         }

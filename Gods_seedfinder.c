@@ -399,7 +399,7 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
 			genArea(layer, biomes, areaX, areaZ, areaWidth, areaHeight);
 
 			// Map the biomes to a color buffer and save to an image.
-			biomesToImage(rgb, biomeColours, biomes, areaWidth, areaHeight, scale, 2);
+			biomesToImage(rgb, biomeColours, biomes, areaWidth, areaHeight, scale, 2, 0);
 			char filename[20];
 			snprintf(filename, 20, "%" PRId64 ".svg", s);
 			saveSVG(filename, rgb, imgWidth, imgHeight);
