@@ -2,7 +2,8 @@
 #include "util.h"
 #include <emscripten.h>
 
-unsigned char* EMSCRIPTEN_KEEPALIVE gen_image(int s) {
+unsigned char* EMSCRIPTEN_KEEPALIVE gen_image(uint32_t lo, uint32_t hi) {
+  int64_t s = (uint64_t)lo | ((uint64_t)hi << 32);
   unsigned char biomeColours[256][3];
   initBiomes();
 
