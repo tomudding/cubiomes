@@ -13,7 +13,6 @@ int main(int argc, char *argv[])
 
     int64_t s;
     unsigned int range, fullrange;
-    char genimage;
     BiomeFilter filter;
     int minscale;
 
@@ -44,15 +43,6 @@ int main(int argc, char *argv[])
             exit(1);
         }
     }
-    if (argc <= 4 || sscanf(argv[4], "%c", &genimage) != 1)
-    {
-        printf("Generate images? [y/n]: ");
-        if (!scanf(" %c", &genimage))
-        {
-            printf("That's not right");
-            exit(1);
-        }
-    }
 
     enum BiomeID biomes[] = {ice_spikes, bamboo_jungle, desert, plains, ocean, jungle, forest, mushroom_fields, mesa, flower_forest, warm_ocean, frozen_ocean, megaTaiga, roofedForest, extremeHills, swamp, savanna, icePlains};
     filter = setupBiomeFilter(biomes,
@@ -73,7 +63,7 @@ int main(int argc, char *argv[])
     applySeed(&g, s);
     int x, z;
 
-    Pos goodhuts[2];
+    //Pos goodhuts[2];
     int hut_count = 0;
     Pos huts[100];
     int huts_found = 0;
@@ -102,8 +92,8 @@ int main(int argc, char *argv[])
                             dz = abs(huts[i].z - huts[j].z);
                             if (sqrt((dx * dx) + (dz * dz)) <= 200)
                             {
-                                goodhuts[0] = huts[i];
-                                goodhuts[1] = huts[j];
+                                //goodhuts[0] = huts[i];
+                                //goodhuts[1] = huts[j];
                                 huts_found = 1;
                             }
                         }
@@ -190,7 +180,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    Pos closest_village;
+    //Pos closest_village;
     int closest_village_distance = -1;
     for (int i = 0; i < sizeof(villages) / sizeof(villages[0]); i++)
     {
@@ -201,7 +191,7 @@ int main(int argc, char *argv[])
         dz = abs(spawn.z - villages[i].z);
         if (sqrt((dx * dx) + (dz * dz)) < closest_village_distance || closest_village_distance == -1)
         {
-            closest_village = villages[i];
+            //closest_village = villages[i];
             closest_village_distance = sqrt((dx * dx) + (dz * dz));
         }
     }

@@ -240,7 +240,8 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
         viable_count++;
 
         fprintf(stderr, "\r%*c", 128, ' ');
-        printf("%" PRId64 "\n", s);
+        fflush(stdout);
+        printf("\r%" PRId64 "\n", s);
         fflush(stdout);
     }
 

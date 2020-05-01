@@ -559,7 +559,7 @@ int main(int argc, char *argv[])
 
 	if (!raw)
 	{
-		printf("Build: 40\n");
+		printf("Build: 41\n");
 		printf("Starting search through seeds %" PRId64 " to %" PRId64 ", using %u threads.\n"
 			   "Search radius = %u.\n",
 			   seedStart, seedEnd, threads, range);
