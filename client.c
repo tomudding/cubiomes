@@ -14,7 +14,6 @@ struct compactinfo_t
     int withHut, withMonument;
     int minscale;
     int thread_id;
-    char genimage;
 };
 
 int64_t count = 0;
@@ -114,7 +113,6 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
     struct compactinfo_t info = *(struct compactinfo_t *)data;
     int ax = -info.range, az = -info.range;
     int w = 2 * info.range, h = 2 * info.range;
-    int fw = 2 * info.fullrange, fh = 2 * info.fullrange;
     int64_t s;
 
     LayerStack g = setupGenerator(MC_1_15);
@@ -134,7 +132,6 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
         applySeed(&g, s);
         int x, z;
 
-        Pos goodhuts[2];
         int hut_count = 0;
         if (info.withHut)
         {
@@ -164,8 +161,6 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
                                     dz = abs(huts[i].z - huts[j].z);
                                     if (sqrt((dx * dx) + (dz * dz)) <= 200)
                                     {
-                                        goodhuts[0] = huts[i];
-                                        goodhuts[1] = huts[j];
                                         huts_found = 1;
                                     }
                                     if (huts_found)
@@ -209,7 +204,6 @@ static DWORD WINAPI searchCompactBiomesThread(LPVOID data)
                 continue;
         }
 
-        int ocean_count = 0;
         // biome enum defined in layers.h
         enum BiomeID req_biomes[] = {ice_spikes, bamboo_jungle, desert, plains, ocean, jungle, forest, mushroom_fields, mesa, flower_forest, warm_ocean, frozen_ocean, megaTaiga, roofedForest, extremeHills, swamp, savanna, icePlains};
         int biome_exists[sizeof(req_biomes) / sizeof(enum BiomeID)] = {0};
@@ -264,7 +258,6 @@ int main(int argc, char *argv[])
 
     int64_t seedStart, seedEnd;
     unsigned int threads, t, range, fullrange;
-    char genimage;
     BiomeFilter filter;
     int withHut, withMonument;
     int minscale;
@@ -357,7 +350,6 @@ int main(int argc, char *argv[])
         info[t].withMonument = withMonument;
         info[t].minscale = minscale;
         info[t].thread_id = t;
-        info[t].genimage = genimage;
     }
     info[threads - 1].seedEnd = seedEnd;
 
