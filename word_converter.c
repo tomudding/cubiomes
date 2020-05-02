@@ -4,8 +4,9 @@
 
 int hashCode(const char *str) {
 	int hash = 0;
+	int length = strlen(str);
 
-	for (int i = 0; i < strlen(str); i++) {
+	for (int i = 0; i < length; i++) {
 		hash = 31 * hash + str[i];
 	}
 
