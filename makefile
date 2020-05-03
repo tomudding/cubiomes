@@ -57,14 +57,7 @@ server: server.o layers.o generator.o finders.o
 
 server.o: server.c
 	$(CC) -c $(CFLAGS) $<
-	
-word_converter: CFLAGS += -O3 -march=native
-word_converter: word_converter.o
-	$(CC) -o $@ $^ $(LDFLAGS)
 
-word_converter.o: word_converter.c
-	$(CC) -c $(CFLAGS) $<
-	
 file_verifier: CFLAGS += -O3 -march=native
 file_verifier: file_verifier.o layers.o generator.o finders.o
 	$(CC) -o $@ $^ $(LDFLAGS)
